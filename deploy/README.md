@@ -1,13 +1,86 @@
 # Azure Ubuntu VM deployment
 
-Use Caddy as the HTTPS reverse proxy. Caddy automatically obtains and renews Let's Encrypt certificates when the domain points to the VM and ports 80 and 443 are reachable.
+The production deployment uses PostgreSQL, systemd, and Caddy. FastAPI listens only on `127.0.0.1:8001`; Caddy exposes the public HTTPS site and manages Let's Encrypt certificates.
 
-1. Create a DNS `A` record from your final hostname to the Azure VM public IP.
-2. In the Azure Network Security Group, allow inbound TCP `80` and `443`. Do not expose `8001`.
-3. Install Git, Python 3.12+, PostgreSQL, and Caddy; create a dedicated `laddercompetitie` Linux user.
-4. Clone the repository to `/opt/laddercompetitie`, create `.venv`, and install the package.
-5. Create `/etc/laddercompetitie/laddercompetitie.env` with production-only secrets and `SESSION_HTTPS_ONLY=true`.
-6. Copy `laddercompetitie.service` to `/etc/systemd/system/`, then run `sudo systemctl daemon-reload && sudo systemctl enable --now laddercompetitie`.
-7. Replace `ladder.example.com` in `Caddyfile.example`, copy it to `/etc/caddy/Caddyfile`, and run `sudo systemctl reload caddy`.
+## 1. Azure and DNS
 
-Use PostgreSQL in production. SQLite is only suitable for local development; add Alembic migrations before the first production deployment.
+1. Create an Ubuntu 24.04 LTS VM and attach a static public IP.
+2. Add an `A` record for the final hostname, such as `ladder.example.com`, to that IP.
+3. In the Network Security Group, allow inbound TCP `80` and `443` from the internet. Restrict SSH port `22` to your own IP. Do not allow ports `7001` or `8001`.
+
+Wait until the DNS record resolves to the VM before configuring Caddy; certificate issuance depends on it.
+
+## 2. Prepare Ubuntu
+
+```bash
+sudo apt update
+sudo apt upgrade -y
+sudo apt install -y git python3 python3-venv postgresql caddy
+sudo useradd --system --create-home --shell /usr/sbin/nologin laddercompetitie
+sudo install -d -o laddercompetitie -g laddercompetitie /opt/laddercompetitie
+sudo install -d -o root -g laddercompetitie -m 750 /etc/laddercompetitie
+```
+
+## 3. PostgreSQL
+
+```bash
+sudo -u postgres createuser --pwprompt laddercompetitie
+sudo -u postgres createdb --owner=laddercompetitie laddercompetitie
+```
+
+Use the password selected above only in the production environment file.
+
+## 4. Application and environment
+
+```bash
+sudo -u laddercompetitie git clone https://github.com/Jverbist/laddercompetitie.git /opt/laddercompetitie
+sudo -u laddercompetitie python3 -m venv /opt/laddercompetitie/.venv
+sudo -u laddercompetitie /opt/laddercompetitie/.venv/bin/pip install /opt/laddercompetitie
+sudo cp /opt/laddercompetitie/deploy/laddercompetitie.env.example /etc/laddercompetitie/laddercompetitie.env
+sudo chown root:laddercompetitie /etc/laddercompetitie/laddercompetitie.env
+sudo chmod 640 /etc/laddercompetitie/laddercompetitie.env
+sudoedit /etc/laddercompetitie/laddercompetitie.env
+```
+
+Set the real hostname in `ALLOWED_HOSTS`, use unique strong secrets, and leave `AUTO_CREATE_SCHEMA=false`. The environment file is intentionally outside Git.
+
+## 5. Service and migrations
+
+```bash
+sudo cp /opt/laddercompetitie/deploy/laddercompetitie.service /etc/systemd/system/
+sudo systemctl daemon-reload
+sudo systemctl enable --now laddercompetitie
+sudo systemctl status laddercompetitie
+```
+
+The `ExecStartPre` command runs `alembic upgrade head` before every application start. This creates the schema on the first deployment and applies future versioned migrations.
+
+## 6. HTTPS with Caddy
+
+Replace `ladder.example.com` in the Caddy configuration with the hostname from step 1:
+
+```bash
+sudoedit /opt/laddercompetitie/deploy/Caddyfile.example
+sudo cp /opt/laddercompetitie/deploy/Caddyfile.example /etc/caddy/Caddyfile
+sudo caddy validate --config /etc/caddy/Caddyfile
+sudo systemctl reload caddy
+```
+
+Caddy obtains and renews the certificate automatically. Verify `https://ladder.example.com/api/health` after it is active.
+
+## Updates and backups
+
+For every release, pull the trusted branch, install locked dependencies when they change, then restart the service:
+
+```bash
+sudo -u laddercompetitie git -C /opt/laddercompetitie pull --ff-only
+sudo -u laddercompetitie /opt/laddercompetitie/.venv/bin/pip install /opt/laddercompetitie
+sudo systemctl restart laddercompetitie
+sudo journalctl -u laddercompetitie -n 100 --no-pager
+```
+
+Back up PostgreSQL regularly. A basic manual backup is:
+
+```bash
+sudo -u postgres pg_dump -Fc laddercompetitie > /var/backups/laddercompetitie-$(date +%F).dump
+```
