@@ -1,0 +1,2 @@
+"""Ladder competition application package."""
+

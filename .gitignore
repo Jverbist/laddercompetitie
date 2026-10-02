@@ -1,0 +1,30 @@
+# Python bytecode and test output
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.coverage
+coverage.xml
+htmlcov/
+
+# Virtual environments and build artifacts
+.venv/
+venv/
+*.egg-info/
+build/
+dist/
+
+# Local configuration and secrets
+.env
+.env.*
+!.env.example
+
+# Local application data
+*.db
+*.sqlite
+*.sqlite3
+instance/
+
+# Editors and operating system files
+.vscode/
+.idea/
+.DS_Store

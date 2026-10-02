@@ -1,0 +1,17 @@
+[Unit]
+Description=Laddercompetitie FastAPI application
+After=network.target
+
+[Service]
+Type=exec
+User=laddercompetitie
+Group=laddercompetitie
+WorkingDirectory=/opt/laddercompetitie
+EnvironmentFile=/etc/laddercompetitie/laddercompetitie.env
+ExecStartPre=/opt/laddercompetitie/.venv/bin/alembic upgrade head
+ExecStart=/opt/laddercompetitie/.venv/bin/uvicorn app.main:app --host 127.0.0.1 --port 8001 --workers 2
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
