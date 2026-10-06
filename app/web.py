@@ -5,6 +5,7 @@ from fastapi import APIRouter, Form, HTTPException, Request
 from fastapi.responses import RedirectResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy import or_, select
+from sqlalchemy.exc import IntegrityError
 
 from app.api.deps import authenticated_user
 from app.core.config import settings
@@ -17,6 +18,7 @@ from app.services.competition import (
     cooldown_opponent_ids,
     create_challenge,
     is_available,
+    register_user,
     submit_result,
 )
 
@@ -76,7 +78,7 @@ def home(request: Request):
 
 @router.get("/login")
 def login_page(request: Request):
-    return templates.TemplateResponse(request, "login.html", {"error": None})
+    return templates.TemplateResponse(request, "login.html", {"error": None, "registration_enabled": settings.registration_enabled})
 
 
 @router.post("/login")
@@ -84,9 +86,50 @@ def login(request: Request, email: str = Form(), password: str = Form()):
     with SessionLocal() as db:
         user = db.scalar(select(User).where(User.email == email.lower()))
         if user is None or not user.is_active or not verify_password(password, user.password_hash):
-            return templates.TemplateResponse(request, "login.html", {"error": "Ongeldig e-mailadres of wachtwoord."}, status_code=401)
+            return templates.TemplateResponse(request, "login.html", {"error": "Ongeldig e-mailadres of wachtwoord.", "registration_enabled": settings.registration_enabled}, status_code=401)
         request.session["user_id"] = user.id
         return _redirect("/change-password" if user.must_reset_password else "/dashboard")
+
+
+def _register_page(request: Request, error: str | None = None, status_code: int = 200):
+    return templates.TemplateResponse(request, "register.html", {"error": error}, status_code=status_code)
+
+
+@router.get("/register")
+def register_page(request: Request):
+    if not settings.registration_enabled:
+        raise HTTPException(status_code=404)
+    return _register_page(request)
+
+
+@router.post("/register")
+def register(
+    request: Request,
+    name: str = Form(),
+    email: str = Form(),
+    password: str = Form(),
+    confirm_password: str = Form(),
+):
+    if not settings.registration_enabled:
+        raise HTTPException(status_code=404)
+    email = email.strip().lower()
+    domains = settings.registration_domain_set
+    if not name.strip() or len(name) > 100 or "@" not in email or len(email) > 255:
+        return _register_page(request, "Vul een geldige naam en een geldig e-mailadres in.", 422)
+    if domains and email.rsplit("@", 1)[1] not in domains:
+        return _register_page(request, "Registratie is enkel mogelijk met een toegelaten e-maildomein.", 422)
+    if password != confirm_password or not 12 <= len(password) <= 128:
+        return _register_page(request, "Gebruik een wachtwoord van 12 tot 128 tekens en bevestig het correct.", 422)
+    try:
+        with SessionLocal.begin() as db:
+            user = register_user(db, name=name, email=email, password=password, admin_emails=settings.admin_email_set)
+            user_id = user.id
+    except HTTPException as exception:
+        return _register_page(request, exception.detail, exception.status_code)
+    except IntegrityError:
+        return _register_page(request, "Registratie mislukt, probeer opnieuw.", 409)
+    request.session["user_id"] = user_id
+    return _redirect("/dashboard")
 
 
 @router.post("/logout")

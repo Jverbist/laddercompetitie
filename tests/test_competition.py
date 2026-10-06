@@ -121,3 +121,16 @@ def test_rematch_is_blocked_for_two_turns(db):
         confirm_result(db, challenge_id=other.id, confirmer_id=challenger.id, now=NOW + timedelta(hours=index + 1))
 
     assert amber.id not in cooldown_opponent_ids(db, john.id)
+
+
+def test_registered_user_starts_at_bottom_of_ladder(db):
+    from app.services.competition import register_user
+
+    add_players(db)
+    newcomer = register_user(db, name="Sam", email="Sam@Example.com", password="correct-horse-battery")
+
+    assert newcomer.rank == 9
+    assert newcomer.email == "sam@example.com"
+    with pytest.raises(HTTPException) as exc:
+        register_user(db, name="Sam", email="sam@example.com", password="correct-horse-battery")
+    assert exc.value.status_code == 409

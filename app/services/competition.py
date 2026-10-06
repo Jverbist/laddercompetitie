@@ -1,10 +1,11 @@
 from datetime import datetime, timedelta
 
 from fastapi import HTTPException, status
-from sqlalchemy import Select, or_, select
+from sqlalchemy import Select, func, or_, select
 from sqlalchemy.orm import Session
 
-from app.models import Challenge, ChallengeStatus, Game, User
+from app.core.security import hash_password
+from app.models import Challenge, ChallengeStatus, Game, User, UserRole
 
 CHALLENGE_DURATION = timedelta(days=2)
 OPEN_CHALLENGE_STATUSES = (ChallengeStatus.ACTIVE, ChallengeStatus.RESULT_PENDING)
@@ -21,6 +22,27 @@ def _open_challenge_for_user(user_id: int) -> Select[tuple[Challenge]]:
         Challenge.status.in_(OPEN_CHALLENGE_STATUSES),
         or_(Challenge.challenger_id == user_id, Challenge.challenged_id == user_id),
     )
+
+
+def register_user(
+    db: Session, *, name: str, email: str, password: str, admin_emails: set[str] = frozenset()
+) -> User:
+    """Create a participant at the bottom of the ladder."""
+    email = email.strip().lower()
+    if db.scalar(select(User).where(User.email == email)):
+        raise HTTPException(status_code=409, detail="Dit e-mailadres is al geregistreerd.")
+    last_rank = db.scalar(select(func.max(User.rank))) or 0
+    user = User(
+        name=name.strip(),
+        email=email,
+        rank=last_rank + 1,
+        role=UserRole.ADMIN if email in admin_emails else UserRole.PARTICIPANT,
+        password_hash=hash_password(password),
+        must_reset_password=False,
+    )
+    db.add(user)
+    db.flush()
+    return user
 
 
 def is_available(db: Session, user: User) -> bool:
