@@ -9,7 +9,7 @@ from app.core.security import hash_password
 from app.db import Base, SessionLocal, engine
 from app.models import Game, User, UserRole
 
-STANDARD_GAMES = ("Pool", "1 leg darts", "Bowling", "Mikado", "4 op een rij")
+STANDARD_GAMES = ("Pool", "1 leg darts", "Bowling", "Mikado", "4 op een rij", "Wie is het")
 
 
 def main(*, reset_admin_passwords: bool = False) -> None:

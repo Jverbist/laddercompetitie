@@ -4,7 +4,7 @@ from pathlib import Path
 from fastapi import APIRouter, Form, HTTPException, Request
 from fastapi.responses import RedirectResponse
 from fastapi.templating import Jinja2Templates
-from sqlalchemy import or_, select
+from sqlalchemy import func, or_, select
 from sqlalchemy.exc import IntegrityError
 
 from app.api.deps import authenticated_user
@@ -64,7 +64,14 @@ def _dashboard_data(db, user: User, error: str | None = None) -> dict:
     complete = [item for item in history if item.status in (ChallengeStatus.COMPLETED, ChallengeStatus.FORFEIT)]
     blocked = cooldown_opponent_ids(db, user.id)
     opponents = [candidate for candidate in ranking if user.rank - 5 <= candidate.rank < user.rank and candidate.id not in blocked and is_available(db, candidate)]
+    games = list(db.scalars(select(Game).where(Game.is_active).order_by(Game.name)))
+    played_per_game = dict(db.execute(
+        select(Challenge.game_id, func.count()).where(
+            Challenge.status.in_((ChallengeStatus.COMPLETED, ChallengeStatus.FORFEIT)), Challenge.game_id.is_not(None)
+        ).group_by(Challenge.game_id)
+    ).all())
     return {
+        "game_overview": [(game, played_per_game.get(game.id, 0)) for game in games],
         "user": user, "ranking": ranking, "top_ten": ranking[:10],
         "games": list(db.scalars(select(Game).where(Game.is_active).order_by(Game.name))),
         "active_challenges": active, "history": history, "eligible_opponents": opponents,
