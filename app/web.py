@@ -221,6 +221,16 @@ def confirm_result_page(request: Request, challenge_id: int):
     return _redirect("/dashboard?success=Resultaat+bevestigd")
 
 
+@router.get("/regels")
+def rules_page(request: Request):
+    with SessionLocal() as db:
+        user = _signed_in(request, db)
+        if isinstance(user, RedirectResponse):
+            return user
+        games = list(db.scalars(select(Game).where(Game.is_active).order_by(Game.name)))
+        return templates.TemplateResponse(request, "rules.html", {"user": user, "games": games, "deadline": settings.qualification_deadline})
+
+
 @router.get("/admin")
 def admin_console(request: Request):
     with SessionLocal() as db:
