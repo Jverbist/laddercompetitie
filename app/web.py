@@ -33,6 +33,9 @@ def _now() -> datetime:
 
 
 def _time_left(deadline: datetime) -> str:
+    if deadline.tzinfo is None:
+        # SQLite drops the timezone; values were stored in the configured timezone.
+        deadline = deadline.replace(tzinfo=settings.qualification_deadline.tzinfo)
     seconds = max(0, int((deadline - _now()).total_seconds()))
     days, seconds = divmod(seconds, 86_400)
     hours, seconds = divmod(seconds, 3_600)
