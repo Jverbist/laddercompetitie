@@ -2,7 +2,7 @@
 
 import argparse
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 
 from app.core.config import settings
 from app.core.security import hash_password
@@ -20,19 +20,21 @@ def main(*, reset_admin_passwords: bool = False) -> None:
         for name in STANDARD_GAMES:
             if db.scalar(select(Game).where(Game.name == name)) is None:
                 db.add(Game(name=name))
-        for index, email in enumerate(sorted(settings.admin_email_set), start=1):
+        for email in sorted(settings.admin_email_set):
             admin = db.scalar(select(User).where(User.email == email))
             if admin is None:
+                next_rank = (db.scalar(select(func.max(User.rank))) or 0) + 1
                 db.add(
                     User(
                         name=email.split("@", maxsplit=1)[0].title(),
                         email=email,
                         role=UserRole.ADMIN,
-                        rank=index,
+                        rank=next_rank,
                         password_hash=hash_password(settings.admin_bootstrap_password),
                         must_reset_password=True,
                     )
                 )
+                db.flush()
             elif reset_admin_passwords or not admin.password_hash:
                 admin.password_hash = hash_password(settings.admin_bootstrap_password)
                 admin.must_reset_password = True
