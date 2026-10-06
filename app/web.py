@@ -19,6 +19,7 @@ from app.services.competition import (
     create_challenge,
     is_available,
     register_user,
+    reset_competition,
     submit_result,
 )
 
@@ -44,6 +45,13 @@ def _time_left(deadline: datetime) -> str:
     return f"{days}d {hours}u {seconds // 60}m"
 
 
+_MONTHS = ("januari", "februari", "maart", "april", "mei", "juni", "juli", "augustus", "september", "oktober", "november", "december")
+
+
+def _date_label(value: datetime) -> str:
+    return f"{value.day} {_MONTHS[value.month - 1]}"
+
+
 def _dashboard_data(db, user: User, error: str | None = None) -> dict:
     ranking = list(db.scalars(select(User).where(User.is_active).order_by(User.rank)))
     active = list(db.scalars(select(Challenge).where(
@@ -61,7 +69,7 @@ def _dashboard_data(db, user: User, error: str | None = None) -> dict:
         "games": list(db.scalars(select(Game).where(Game.is_active).order_by(Game.name))),
         "active_challenges": active, "history": history, "eligible_opponents": opponents,
         "wins": sum(item.confirmed_winner_id == user.id for item in complete),
-        "played": len(complete), "qualification_time": _time_left(settings.qualification_deadline),
+        "played": len(complete), "qualification_time": _time_left(settings.qualification_deadline), "end_label": _date_label(settings.qualification_deadline),
         "time_left": {item.id: _time_left(item.deadline_at) for item in active}, "error": error,
     }
 
@@ -228,7 +236,7 @@ def rules_page(request: Request):
         if isinstance(user, RedirectResponse):
             return user
         games = list(db.scalars(select(Game).where(Game.is_active).order_by(Game.name)))
-        return templates.TemplateResponse(request, "rules.html", {"user": user, "games": games, "deadline": settings.qualification_deadline})
+        return templates.TemplateResponse(request, "rules.html", {"user": user, "games": games, "deadline": settings.qualification_deadline, "end_label": _date_label(settings.qualification_deadline)})
 
 
 @router.get("/admin")
@@ -239,4 +247,19 @@ def admin_console(request: Request):
             return user
         if user.role is not UserRole.ADMIN:
             raise HTTPException(status_code=403, detail="Administrator permission required.")
-        return templates.TemplateResponse(request, "admin.html", {"user": user, "users": list(db.scalars(select(User).order_by(User.rank))), "games": list(db.scalars(select(Game).order_by(Game.name))), "challenges": list(db.scalars(select(Challenge).order_by(Challenge.created_at.desc(), Challenge.id.desc()))), "winners": {u.id: u.name for u in db.scalars(select(User))}})
+        return templates.TemplateResponse(request, "admin.html", {"user": user, "users": list(db.scalars(select(User).order_by(User.rank))), "games": list(db.scalars(select(Game).order_by(Game.name))), "challenges": list(db.scalars(select(Challenge).order_by(Challenge.created_at.desc(), Challenge.id.desc()))), "winners": {u.id: u.name for u in db.scalars(select(User))}, "message": request.query_params.get("success"), "error": request.query_params.get("error")})
+
+
+@router.post("/admin/reset")
+def reset_competition_page(request: Request, confirmation: str = Form()):
+    with SessionLocal() as db:
+        user = _signed_in(request, db)
+        if isinstance(user, RedirectResponse):
+            return user
+        if user.role is not UserRole.ADMIN:
+            raise HTTPException(status_code=403, detail="Administrator permission required.")
+        if confirmation.strip() != "RESET":
+            return _redirect("/admin?error=Typ+RESET+om+te+bevestigen")
+        removed, players = reset_competition(db)
+        db.commit()
+    return _redirect(f"/admin?success=Competitie+gereset:+{players}+spelers+willekeurig+geplaatst,+{removed}+uitdagingen+verwijderd")

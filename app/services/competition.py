@@ -1,7 +1,8 @@
+import random
 from datetime import datetime, timedelta
 
 from fastapi import HTTPException, status
-from sqlalchemy import Select, func, or_, select
+from sqlalchemy import Select, delete, func, or_, select
 from sqlalchemy.orm import Session
 
 from app.core.security import hash_password
@@ -196,3 +197,19 @@ def _complete_challenge(
         db.flush()
         challenger.rank = challenged_rank
     db.flush()
+
+
+def reset_competition(db: Session, *, rng: random.Random | None = None) -> tuple[int, int]:
+    """Remove all challenges and place every participant at a random rank."""
+    rng = rng or random.SystemRandom()
+    removed = db.execute(delete(Challenge)).rowcount
+    users = list(db.scalars(select(User).order_by(User.id).with_for_update()))
+    # Rank is unique, so move everyone out of the way before assigning the new order.
+    for user in users:
+        user.rank = -user.id
+    db.flush()
+    rng.shuffle(users)
+    for position, user in enumerate(users, start=1):
+        user.rank = position
+    db.flush()
+    return removed, len(users)

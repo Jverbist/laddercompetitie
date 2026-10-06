@@ -13,7 +13,7 @@ class Settings(BaseSettings):
     allowed_hosts: str = "*"
     registration_enabled: bool = True
     registration_email_domains: str = ""
-    qualification_deadline: datetime = datetime.fromisoformat("2026-10-15T23:59:59+02:00")
+    qualification_deadline: datetime = datetime.fromisoformat("2026-11-13T23:59:59+01:00")
     final_day_start: datetime = datetime.fromisoformat("2026-10-16T09:00:00+02:00")
 
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")

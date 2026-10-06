@@ -134,3 +134,24 @@ def test_registered_user_starts_at_bottom_of_ladder(db):
     with pytest.raises(HTTPException) as exc:
         register_user(db, name="Sam", email="sam@example.com", password="correct-horse-battery")
     assert exc.value.status_code == 409
+
+
+def test_reset_removes_challenges_and_reshuffles_all_ranks(db):
+    import random
+
+    from app.models import Challenge
+    from app.services.competition import reset_competition
+
+    (amber, john, noor), game = add_players(db)
+    challenge = create_challenge(db, challenger_id=john.id, challenged_id=amber.id, now=NOW)
+    choose_game(db, challenge_id=challenge.id, chooser_id=amber.id, game_id=game.id)
+    submit_result(db, challenge_id=challenge.id, submitter_id=john.id, winner_id=john.id)
+    confirm_result(db, challenge_id=challenge.id, confirmer_id=amber.id, now=NOW)
+
+    removed, players = reset_competition(db, rng=random.Random(1))
+    db.commit()
+
+    assert (removed, players) == (1, 3)
+    assert db.query(Challenge).count() == 0
+    assert sorted(user.rank for user in (amber, john, noor)) == [1, 2, 3]
+    assert is_available(db, amber) and is_available(db, john)
