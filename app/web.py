@@ -229,4 +229,4 @@ def admin_console(request: Request):
             return user
         if user.role is not UserRole.ADMIN:
             raise HTTPException(status_code=403, detail="Administrator permission required.")
-        return templates.TemplateResponse(request, "admin.html", {"user": user, "users": list(db.scalars(select(User).order_by(User.rank))), "games": list(db.scalars(select(Game).order_by(Game.name))), "challenges": list(db.scalars(select(Challenge).order_by(Challenge.created_at.desc()).limit(20)))})
+        return templates.TemplateResponse(request, "admin.html", {"user": user, "users": list(db.scalars(select(User).order_by(User.rank))), "games": list(db.scalars(select(Game).order_by(Game.name))), "challenges": list(db.scalars(select(Challenge).order_by(Challenge.created_at.desc(), Challenge.id.desc()))), "winners": {u.id: u.name for u in db.scalars(select(User))}})
