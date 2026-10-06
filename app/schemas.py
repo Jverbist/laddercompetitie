@@ -55,6 +55,9 @@ class GameRead(BaseModel):
 
 class ChallengeCreate(BaseModel):
     challenged_id: int = Field(gt=0)
+
+
+class GameChoice(BaseModel):
     game_id: int = Field(gt=0)
 
 
@@ -68,7 +71,7 @@ class ChallengeRead(BaseModel):
     id: int
     challenger_id: int
     challenged_id: int
-    game_id: int
+    game_id: int | None
     challenger_rank_at_creation: int
     challenged_rank_at_creation: int
     status: ChallengeStatus

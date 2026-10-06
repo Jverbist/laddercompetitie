@@ -11,6 +11,7 @@ from app.schemas import (
     ChallengeCreate,
     ChallengeRead,
     AdminPasswordReset,
+    GameChoice,
     GameCreate,
     GameRead,
     ResultSubmit,
@@ -20,7 +21,9 @@ from app.schemas import (
     UserRead,
 )
 from app.services.competition import (
+    choose_game,
     confirm_result,
+    cooldown_opponent_ids,
     create_challenge,
     expire_overdue_challenges,
     is_available,
@@ -72,7 +75,8 @@ def eligible_opponents(db: DbSession, user: CurrentUser) -> list[User]:
         )
         .order_by(User.rank)
     )
-    return [candidate for candidate in candidates if is_available(db, candidate)]
+    blocked = cooldown_opponent_ids(db, user.id)
+    return [c for c in candidates if c.id not in blocked and is_available(db, c)]
 
 
 @router.get("/games", response_model=list[GameRead])
@@ -86,9 +90,16 @@ def start_challenge(payload: ChallengeCreate, db: DbSession, user: CurrentUser) 
         db,
         challenger_id=user.id,
         challenged_id=payload.challenged_id,
-        game_id=payload.game_id,
         now=datetime.now(settings.qualification_deadline.tzinfo),
     )
+    db.commit()
+    db.refresh(challenge)
+    return challenge
+
+
+@router.post("/challenges/{challenge_id}/game", response_model=ChallengeRead)
+def pick_game(challenge_id: int, payload: GameChoice, db: DbSession, user: CurrentUser) -> Challenge:
+    challenge = choose_game(db, challenge_id=challenge_id, chooser_id=user.id, game_id=payload.game_id)
     db.commit()
     db.refresh(challenge)
     return challenge

@@ -11,7 +11,14 @@ from app.core.config import settings
 from app.core.security import hash_password, verify_password
 from app.db import SessionLocal
 from app.models import Challenge, ChallengeStatus, Game, User, UserRole
-from app.services.competition import confirm_result, create_challenge, is_available, submit_result
+from app.services.competition import (
+    choose_game,
+    confirm_result,
+    cooldown_opponent_ids,
+    create_challenge,
+    is_available,
+    submit_result,
+)
 
 templates = Jinja2Templates(directory=str(Path(__file__).parent / "templates"))
 router = APIRouter()
@@ -42,7 +49,8 @@ def _dashboard_data(db, user: User, error: str | None = None) -> dict:
         or_(Challenge.challenger_id == user.id, Challenge.challenged_id == user.id)
     ).order_by(Challenge.created_at.desc()).limit(5)))
     complete = [item for item in history if item.status in (ChallengeStatus.COMPLETED, ChallengeStatus.FORFEIT)]
-    opponents = [candidate for candidate in ranking if user.rank - 5 <= candidate.rank < user.rank and is_available(db, candidate)]
+    blocked = cooldown_opponent_ids(db, user.id)
+    opponents = [candidate for candidate in ranking if user.rank - 5 <= candidate.rank < user.rank and candidate.id not in blocked and is_available(db, candidate)]
     return {
         "user": user, "ranking": ranking, "top_ten": ranking[:10],
         "games": list(db.scalars(select(Game).where(Game.is_active).order_by(Game.name))),
@@ -108,18 +116,33 @@ def dashboard(request: Request):
 
 
 @router.post("/dashboard/challenges")
-def start_challenge_page(request: Request, challenged_id: int = Form(), game_id: int = Form()):
+def start_challenge_page(request: Request, challenged_id: int = Form()):
     with SessionLocal() as db:
         user = _signed_in(request, db)
         if isinstance(user, RedirectResponse):
             return user
         try:
-            create_challenge(db, challenger_id=user.id, challenged_id=challenged_id, game_id=game_id, now=_now())
+            create_challenge(db, challenger_id=user.id, challenged_id=challenged_id, now=_now())
             db.commit()
         except HTTPException as exception:
             db.rollback()
             return templates.TemplateResponse(request, "dashboard.html", _dashboard_data(db, user, exception.detail), status_code=exception.status_code)
     return _redirect("/dashboard?success=Uitdaging+verstuurd")
+
+
+@router.post("/dashboard/challenges/{challenge_id}/game")
+def choose_game_page(request: Request, challenge_id: int, game_id: int = Form()):
+    with SessionLocal() as db:
+        user = _signed_in(request, db)
+        if isinstance(user, RedirectResponse):
+            return user
+        try:
+            choose_game(db, challenge_id=challenge_id, chooser_id=user.id, game_id=game_id)
+            db.commit()
+        except HTTPException as exception:
+            db.rollback()
+            return templates.TemplateResponse(request, "dashboard.html", _dashboard_data(db, user, exception.detail), status_code=exception.status_code)
+    return _redirect("/dashboard?success=Spel+gekozen")
 
 
 @router.post("/dashboard/challenges/{challenge_id}/result")

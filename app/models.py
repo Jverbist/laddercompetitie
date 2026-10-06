@@ -58,7 +58,7 @@ class Challenge(Base):
     id: Mapped[int] = mapped_column(primary_key=True)
     challenger_id: Mapped[int] = mapped_column(ForeignKey("users.id"), index=True)
     challenged_id: Mapped[int] = mapped_column(ForeignKey("users.id"), index=True)
-    game_id: Mapped[int] = mapped_column(ForeignKey("games.id"))
+    game_id: Mapped[int | None] = mapped_column(ForeignKey("games.id"), nullable=True)
     challenger_rank_at_creation: Mapped[int] = mapped_column(Integer)
     challenged_rank_at_creation: Mapped[int] = mapped_column(Integer)
     status: Mapped[ChallengeStatus] = mapped_column(Enum(ChallengeStatus), default=ChallengeStatus.ACTIVE)
@@ -70,4 +70,4 @@ class Challenge(Base):
 
     challenger: Mapped[User] = relationship(foreign_keys=[challenger_id], back_populates="challenges_started")
     challenged: Mapped[User] = relationship(foreign_keys=[challenged_id], back_populates="challenges_received")
-    game: Mapped[Game] = relationship()
+    game: Mapped[Game | None] = relationship()
