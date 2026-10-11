@@ -38,7 +38,7 @@ def challenge_feed(token: str, request: Request):
         title = escape(f"{a} (#{challenge.challenger_rank_at_creation}) daagt {b} (#{challenge.challenged_rank_at_creation}) uit")
         items.append(
             f"<item><title>{title}</title><link>{base}/dashboard</link>"
-            f'<guid isPermaLink="false">challenge-{challenge.id}</guid>'
+            f'<guid isPermaLink="false">challenge-{challenge.id}-{int(created.timestamp())}</guid>'
             f"<pubDate>{format_datetime(created)}</pubDate></item>"
         )
     xml = (
