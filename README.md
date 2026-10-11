@@ -128,7 +128,7 @@ TEAMS_WEBHOOK_URL=
 
 Zet `SESSION_HTTPS_ONLY=true` pas aan nadat HTTPS werkt, anders lukt het aanmelden niet. `REGISTRATION_EMAIL_DOMAINS` beperkt registratie tot die e-maildomeinen (kommagescheiden). Leeg betekent dat iedereen zich kan registreren. `REGISTRATION_ENABLED=false` schakelt registratie uit.
 
-Optioneel: zet `TEAMS_WEBHOOK_URL` op de webhook-URL van een Power Automate-flow die JSON ontvangt en een bericht in Teams plaatst. Bij elke nieuwe uitdaging stuurt de app de namen, ladderposities, het deadline-tijdstip en het uitdaging-ID. Bewaar deze URL alleen in `.env` op de server; deel of commit hem niet. Herstart daarna de service met `sudo systemctl restart laddercompetitie`.
+Optioneel: zet `TEAMS_WEBHOOK_URL` op de URL van een Power Automate Teams-webhook-flow. Bij elke nieuwe uitdaging stuurt de app een Adaptive Card met de namen, ladderposities, deadline en het uitdaging-ID. Bewaar deze URL alleen in `.env` op de server; deel of commit hem niet. Herstart daarna de service met `sudo systemctl restart laddercompetitie`.
 
 ### 3. Database voorbereiden
 

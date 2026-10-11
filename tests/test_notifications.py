@@ -37,10 +37,36 @@ def test_challenge_notification_posts_competition_details(monkeypatch):
     assert request.get_method() == "POST"
     assert request.get_header("Content-type") == "application/json"
     assert json.loads(request.data) == {
-        "event": "challenge.created",
-        "challenge_id": 17,
-        "challenger": {"name": "Jules", "rank": 8},
-        "challenged": {"name": "Yasmine", "rank": 5},
-        "deadline_at": deadline.isoformat(),
-        "text": "Jules (#8) daagt Yasmine (#5) uit.",
+        "type": "message",
+        "attachments": [
+            {
+                "contentType": "application/vnd.microsoft.card.adaptive",
+                "contentUrl": None,
+                "content": {
+                    "$schema": "http://adaptivecards.io/schemas/adaptive-card.json",
+                    "type": "AdaptiveCard",
+                    "version": "1.2",
+                    "body": [
+                        {
+                            "type": "TextBlock",
+                            "text": "Nieuwe ladderuitdaging",
+                            "weight": "Bolder",
+                            "size": "Medium",
+                        },
+                        {
+                            "type": "TextBlock",
+                            "text": "Jules (#8) daagt Yasmine (#5) uit.",
+                            "wrap": True,
+                        },
+                        {
+                            "type": "FactSet",
+                            "facts": [
+                                {"title": "Uitdaging", "value": "17"},
+                                {"title": "Deadline", "value": deadline.isoformat()},
+                            ],
+                        },
+                    ],
+                },
+            }
+        ],
     }

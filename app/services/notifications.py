@@ -18,15 +18,41 @@ def send_challenge_notification(
     deadline_at: datetime,
 ) -> None:
     payload = {
-        "event": "challenge.created",
-        "challenge_id": challenge_id,
-        "challenger": {"name": challenger_name, "rank": challenger_rank},
-        "challenged": {"name": challenged_name, "rank": challenged_rank},
-        "deadline_at": deadline_at.isoformat(),
-        "text": (
-            f"{challenger_name} (#{challenger_rank}) daagt "
-            f"{challenged_name} (#{challenged_rank}) uit."
-        ),
+        "type": "message",
+        "attachments": [
+            {
+                "contentType": "application/vnd.microsoft.card.adaptive",
+                "contentUrl": None,
+                "content": {
+                    "$schema": "http://adaptivecards.io/schemas/adaptive-card.json",
+                    "type": "AdaptiveCard",
+                    "version": "1.2",
+                    "body": [
+                        {
+                            "type": "TextBlock",
+                            "text": "Nieuwe ladderuitdaging",
+                            "weight": "Bolder",
+                            "size": "Medium",
+                        },
+                        {
+                            "type": "TextBlock",
+                            "text": (
+                                f"{challenger_name} (#{challenger_rank}) daagt "
+                                f"{challenged_name} (#{challenged_rank}) uit."
+                            ),
+                            "wrap": True,
+                        },
+                        {
+                            "type": "FactSet",
+                            "facts": [
+                                {"title": "Uitdaging", "value": str(challenge_id)},
+                                {"title": "Deadline", "value": deadline_at.isoformat()},
+                            ],
+                        },
+                    ],
+                },
+            }
+        ],
     }
     request = Request(
         webhook_url,
