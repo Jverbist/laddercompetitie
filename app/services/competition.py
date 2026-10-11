@@ -200,7 +200,7 @@ def _complete_challenge(
 
 
 def reset_competition(db: Session, *, rng: random.Random | None = None) -> tuple[int, int]:
-    """Remove all challenges and place every participant at a random rank."""
+    """Remove all challenges, unblock/reactivate everyone and place them at a random rank."""
     rng = rng or random.SystemRandom()
     removed = db.execute(delete(Challenge)).rowcount
     users = list(db.scalars(select(User).order_by(User.id).with_for_update()))
@@ -211,5 +211,7 @@ def reset_competition(db: Session, *, rng: random.Random | None = None) -> tuple
     rng.shuffle(users)
     for position, user in enumerate(users, start=1):
         user.rank = position
+        user.is_blocked = False
+        user.is_active = True
     db.flush()
     return removed, len(users)
