@@ -9,6 +9,7 @@ from app.api.routes import router
 from app.core.config import settings
 from app.db import Base, engine
 from app.web import router as web_router
+from app.feed import router as feed_router
 
 
 @asynccontextmanager
@@ -34,3 +35,4 @@ app.add_middleware(TrustedHostMiddleware, allowed_hosts=settings.allowed_host_li
 app.mount("/static", StaticFiles(directory="app/static"), name="static")
 app.include_router(router, prefix="/api")
 app.include_router(web_router)
+app.include_router(feed_router)

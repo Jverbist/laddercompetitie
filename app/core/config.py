@@ -14,6 +14,7 @@ class Settings(BaseSettings):
     registration_enabled: bool = True
     registration_email_domains: str = ""
     teams_webhook_url: str = ""
+    rss_feed_token: str = ""
     qualification_deadline: datetime = datetime.fromisoformat("2026-11-13T23:59:59+01:00")
     final_day_start: datetime = datetime.fromisoformat("2026-10-16T09:00:00+02:00")
 
