@@ -1,7 +1,7 @@
 from datetime import datetime
 from pathlib import Path
 
-from fastapi import APIRouter, Form, HTTPException, Request
+from fastapi import APIRouter, BackgroundTasks, Form, HTTPException, Request
 from fastapi.responses import RedirectResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy import func, or_, select
@@ -22,6 +22,7 @@ from app.services.competition import (
     reset_competition,
     submit_result,
 )
+from app.services.notifications import send_challenge_notification
 
 templates = Jinja2Templates(directory=str(Path(__file__).parent / "templates"))
 router = APIRouter()
@@ -177,14 +178,28 @@ def dashboard(request: Request):
 
 
 @router.post("/dashboard/challenges")
-def start_challenge_page(request: Request, challenged_id: int = Form()):
+def start_challenge_page(request: Request, background_tasks: BackgroundTasks, challenged_id: int = Form()):
     with SessionLocal() as db:
         user = _signed_in(request, db)
         if isinstance(user, RedirectResponse):
             return user
         try:
-            create_challenge(db, challenger_id=user.id, challenged_id=challenged_id, now=_now())
+            challenge = create_challenge(db, challenger_id=user.id, challenged_id=challenged_id, now=_now())
+            notification = {
+                "challenge_id": challenge.id,
+                "challenger_name": user.name,
+                "challenger_rank": challenge.challenger_rank_at_creation,
+                "challenged_name": challenge.challenged.name,
+                "challenged_rank": challenge.challenged_rank_at_creation,
+                "deadline_at": challenge.deadline_at,
+            }
             db.commit()
+            if settings.teams_webhook_url:
+                background_tasks.add_task(
+                    send_challenge_notification,
+                    webhook_url=settings.teams_webhook_url,
+                    **notification,
+                )
         except HTTPException as exception:
             db.rollback()
             return templates.TemplateResponse(request, "dashboard.html", _dashboard_data(db, user, exception.detail), status_code=exception.status_code)

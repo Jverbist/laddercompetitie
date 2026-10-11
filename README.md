@@ -103,6 +103,146 @@ Dit reset uitsluitend de wachtwoorden van de e-mailadressen in `ADMIN_EMAILS`; s
 6. Een geplande taak roept `POST /api/admin/process-deadlines` aan. Elke verlopen actieve uitdaging wordt automatisch gewonnen door de uitdager en verwerkt volgens dezelfde ladderregel.
 7. Admins beheren toegang met `PATCH /api/admin/users/{id}/access`, stellen een tijdelijk wachtwoord in met `POST /api/admin/users/{id}/reset-password`, annuleren open uitdagingen met `POST /api/admin/challenges/{id}/cancel` en bekijken alle uitdagingen met `GET /api/admin/challenges`.
 
+## Draaien op een Azure VM (SQLite, systemd en Caddy)
+
+Dit is de eenvoudige opzet met SQLite in de projectmap. Voor PostgreSQL en een eigen service-gebruiker, zie `deploy/README.md`.
+
+### 1. Netwerk en DNS
+
+- Maak een DNS A-record voor de hostnaam (bv. `ctf.exn.be`) naar het publieke IP van de VM.
+- Laat in het Azure NSG inkomend TCP `80` en `443` toe. Poort `8000` hoeft niet open te staan.
+
+### 2. Configuratie in `.env`
+
+```dotenv
+ADMIN_EMAILS=naam@exclusive-networks.be,collega@exclusive-networks.be
+ADMIN_BOOTSTRAP_PASSWORD=een-uniek-wachtwoord-van-minstens-12-tekens
+SESSION_SECRET=een-lange-willekeurige-string
+ALLOWED_HOSTS=ctf.exn.be
+SESSION_HTTPS_ONLY=true
+QUALIFICATION_DEADLINE=2026-11-13T23:59:59+01:00
+REGISTRATION_ENABLED=true
+REGISTRATION_EMAIL_DOMAINS=exclusive-networks.be
+TEAMS_WEBHOOK_URL=
+```
+
+Zet `SESSION_HTTPS_ONLY=true` pas aan nadat HTTPS werkt, anders lukt het aanmelden niet. `REGISTRATION_EMAIL_DOMAINS` beperkt registratie tot die e-maildomeinen (kommagescheiden). Leeg betekent dat iedereen zich kan registreren. `REGISTRATION_ENABLED=false` schakelt registratie uit.
+
+Optioneel: zet `TEAMS_WEBHOOK_URL` op de webhook-URL van een Power Automate-flow die JSON ontvangt en een bericht in Teams plaatst. Bij elke nieuwe uitdaging stuurt de app de namen, ladderposities, het deadline-tijdstip en het uitdaging-ID. Bewaar deze URL alleen in `.env` op de server; deel of commit hem niet. Herstart daarna de service met `sudo systemctl restart laddercompetitie`.
+
+### 3. Database voorbereiden
+
+```bash
+cd ~/laddercompetitie
+.venv/bin/alembic upgrade head
+.venv/bin/python scripts/seed.py
+```
+
+`seed.py` maakt de standaardspellen en de admins uit `ADMIN_EMAILS` aan en mag meermaals uitgevoerd worden. Nieuwe admins komen onderaan de ladder. Een bestaand account wordt hierdoor niet admin, zie "Admins beheren" hieronder.
+
+### 4. HTTPS met Caddy
+
+```bash
+sudo apt update && sudo apt install -y caddy
+sudo tee /etc/caddy/Caddyfile >/dev/null <<'EOF'
+ctf.exn.be {
+    reverse_proxy 127.0.0.1:8000
+}
+EOF
+sudo caddy validate --config /etc/caddy/Caddyfile
+sudo systemctl reload caddy
+```
+
+Caddy haalt het Let's Encrypt-certificaat zelf op en vernieuwt het. Poort 80 en 443 moeten vrij zijn.
+
+### 5. De app permanent laten draaien (zonder SSH-sessie)
+
+```bash
+sudo tee /etc/systemd/system/laddercompetitie.service >/dev/null <<'EOF'
+[Unit]
+Description=Laddercompetitie FastAPI application
+After=network.target
+
+[Service]
+Type=exec
+User=ubuntu
+Group=ubuntu
+WorkingDirectory=/home/ubuntu/laddercompetitie
+ExecStartPre=/home/ubuntu/laddercompetitie/.venv/bin/alembic upgrade head
+ExecStart=/home/ubuntu/laddercompetitie/.venv/bin/uvicorn app.main:app --host 127.0.0.1 --port 8000 --workers 2
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
+EOF
+sudo systemctl daemon-reload
+sudo systemctl enable --now laddercompetitie
+sudo systemctl status laddercompetitie
+curl -i https://ctf.exn.be/api/health
+```
+
+De app leest `.env` zelf uit de `WorkingDirectory`. Uvicorn luistert enkel op `127.0.0.1`, zodat alleen Caddy bereikbaar is van buitenaf.
+
+| Doel | Commando |
+|---|---|
+| Logs live volgen | `sudo journalctl -u laddercompetitie -f` |
+| Herstarten na een codewijziging of `.env`-wijziging | `sudo systemctl restart laddercompetitie` |
+| Stoppen | `sudo systemctl stop laddercompetitie` |
+
+Zonder `--reload` wordt nieuwe code pas actief na een herstart.
+
+### 6. Updates uitrollen
+
+```bash
+cd ~/laddercompetitie
+cp laddercompetitie.db laddercompetitie.db.bak
+git pull --ff-only
+.venv/bin/pip install .
+sudo systemctl restart laddercompetitie
+```
+
+De migraties worden bij elke start automatisch uitgevoerd via `ExecStartPre`.
+
+### Admins beheren
+
+De rol wordt niet automatisch aangepast voor bestaande accounts. Gebruik de database:
+
+```bash
+sqlite3 laddercompetitie.db "UPDATE users SET role='ADMIN' WHERE email='naam@exclusive-networks.be';"
+sqlite3 laddercompetitie.db "UPDATE users SET role='PARTICIPANT' WHERE email='naam@exclusive-networks.be';"
+sqlite3 laddercompetitie.db "SELECT rank, email, role FROM users;"
+```
+
+Installeer `sqlite3` indien nodig met `sudo apt install -y sqlite3`. De wijziging werkt meteen, een herstart is niet nodig.
+
+### Spellen beheren
+
+Zet een spel inactief in plaats van het te verwijderen, zodat de geschiedenis behouden blijft:
+
+```bash
+.venv/bin/python -c "
+from app.db import SessionLocal
+from app.models import Game
+with SessionLocal.begin() as db:
+    for g in db.query(Game).filter(Game.name.in_(['Bowling', 'Mikado'])):
+        g.is_active = False
+"
+```
+
+Een nieuw spel toevoeg je aan `STANDARD_GAMES` in `scripts/seed.py` en je voert daarna `scripts/seed.py` uit.
+
+### Competitie resetten
+
+In `/admin` staat onder "Gevarenzone" de knop **Reset en schud de ladder**. Die verwijdert alle uitdagingen en plaatst alle spelers in een willekeurige volgorde. Maak vooraf een back-up met `cp laddercompetitie.db laddercompetitie.db.bak`. De reset kan niet ongedaan gemaakt worden.
+
+## Spelregels in de applicatie
+
+- De uitdager kiest een tegenstander tot vijf plaatsen hoger. De uitgedaagde kiest het spel.
+- Na een afgeronde wedstrijd moet je twee andere wedstrijden spelen voor je dezelfde tegenstander opnieuw mag uitdagen (`REMATCH_COOLDOWN_TURNS` in `app/services/competition.py`).
+- Nieuwe spelers beginnen onderaan de ladder.
+- Het dashboard heeft een spelregelpagina op `/regels`, en het beheerpaneel toont alle uitdagingen met hun winnaar.
+
 ## Volgende bouwstappen
 
 1. Configureer vóór productie `https_only=True` voor de sessiecookie, voeg CSRF-bescherming toe aan formulieracties en vervang lokale login desgewenst door bedrijfs-SSO/OIDC.

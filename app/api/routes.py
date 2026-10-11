@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, BackgroundTasks, HTTPException, status
 from sqlalchemy import select
 
 from app.api.deps import AdminUser, AuthenticatedUser, CurrentUser, DbSession
@@ -29,6 +29,7 @@ from app.services.competition import (
     is_available,
     submit_result,
 )
+from app.services.notifications import send_challenge_notification
 
 router = APIRouter()
 
@@ -85,15 +86,34 @@ def games(db: DbSession) -> list[Game]:
 
 
 @router.post("/challenges", response_model=ChallengeRead, status_code=status.HTTP_201_CREATED)
-def start_challenge(payload: ChallengeCreate, db: DbSession, user: CurrentUser) -> Challenge:
+def start_challenge(
+    payload: ChallengeCreate,
+    background_tasks: BackgroundTasks,
+    db: DbSession,
+    user: CurrentUser,
+) -> Challenge:
     challenge = create_challenge(
         db,
         challenger_id=user.id,
         challenged_id=payload.challenged_id,
         now=datetime.now(settings.qualification_deadline.tzinfo),
     )
+    notification = {
+        "challenge_id": challenge.id,
+        "challenger_name": user.name,
+        "challenger_rank": challenge.challenger_rank_at_creation,
+        "challenged_name": challenge.challenged.name,
+        "challenged_rank": challenge.challenged_rank_at_creation,
+        "deadline_at": challenge.deadline_at,
+    }
     db.commit()
     db.refresh(challenge)
+    if settings.teams_webhook_url:
+        background_tasks.add_task(
+            send_challenge_notification,
+            webhook_url=settings.teams_webhook_url,
+            **notification,
+        )
     return challenge
 
 
