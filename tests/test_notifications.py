@@ -57,6 +57,15 @@ def test_challenge_notification_posts_competition_details(monkeypatch):
                     "$schema": "http://adaptivecards.io/schemas/adaptive-card.json",
                     "type": "AdaptiveCard",
                     "version": "1.2",
+                    "msteams": {
+                        "entities": [
+                            {
+                                "type": "mention",
+                                "text": "<at>Yasmine</at>",
+                                "mentioned": {"id": "yasmine@example.com", "name": "Yasmine"},
+                            }
+                        ]
+                    },
                     "body": [
                         {
                             "type": "TextBlock",
@@ -66,7 +75,7 @@ def test_challenge_notification_posts_competition_details(monkeypatch):
                         },
                         {
                             "type": "TextBlock",
-                            "text": "Jules (#8) daagt Yasmine (#5) uit.",
+                            "text": "Jules (#8) daagt <at>Yasmine</at> (#5) uit.",
                             "wrap": True,
                         },
                         {

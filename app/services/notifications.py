@@ -19,6 +19,22 @@ def send_challenge_notification(
     challenger_email: str = "",
     challenged_email: str = "",
 ) -> None:
+    mention_text = challenged_name
+    mention_entities: dict = {}
+    if challenged_email:
+        # Teams only notifies the player when the card text contains <at>name</at> and a matching entity.
+        mention_text = f"<at>{challenged_name}</at>"
+        mention_entities = {
+            "msteams": {
+                "entities": [
+                    {
+                        "type": "mention",
+                        "text": mention_text,
+                        "mentioned": {"id": challenged_email, "name": challenged_name},
+                    }
+                ]
+            }
+        }
     payload = {
         "type": "message",
         "challenge_id": challenge_id,
@@ -35,6 +51,7 @@ def send_challenge_notification(
                     "$schema": "http://adaptivecards.io/schemas/adaptive-card.json",
                     "type": "AdaptiveCard",
                     "version": "1.2",
+                    **mention_entities,
                     "body": [
                         {
                             "type": "TextBlock",
@@ -46,7 +63,7 @@ def send_challenge_notification(
                             "type": "TextBlock",
                             "text": (
                                 f"{challenger_name} (#{challenger_rank}) daagt "
-                                f"{challenged_name} (#{challenged_rank}) uit."
+                                f"{mention_text} (#{challenged_rank}) uit."
                             ),
                             "wrap": True,
                         },
