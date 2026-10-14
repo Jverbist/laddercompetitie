@@ -188,8 +188,10 @@ def start_challenge_page(request: Request, background_tasks: BackgroundTasks, ch
             notification = {
                 "challenge_id": challenge.id,
                 "challenger_name": user.name,
+                "challenger_email": user.email,
                 "challenger_rank": challenge.challenger_rank_at_creation,
                 "challenged_name": challenge.challenged.name,
+                "challenged_email": challenge.challenged.email,
                 "challenged_rank": challenge.challenged_rank_at_creation,
                 "deadline_at": challenge.deadline_at,
             }

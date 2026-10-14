@@ -16,9 +16,17 @@ def send_challenge_notification(
     challenged_name: str,
     challenged_rank: int,
     deadline_at: datetime,
+    challenger_email: str = "",
+    challenged_email: str = "",
 ) -> None:
     payload = {
         "type": "message",
+        "challenge_id": challenge_id,
+        "challenger_name": challenger_name,
+        "challenger_email": challenger_email,
+        "challenged_name": challenged_name,
+        "challenged_email": challenged_email,
+        "deadline_at": deadline_at.isoformat(),
         "attachments": [
             {
                 "contentType": "application/vnd.microsoft.card.adaptive",

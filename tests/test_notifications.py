@@ -33,6 +33,8 @@ def test_challenge_notification_posts_competition_details(monkeypatch):
         challenged_name="Yasmine",
         challenged_rank=5,
         deadline_at=deadline,
+        challenger_email="jules@example.com",
+        challenged_email="yasmine@example.com",
     )
 
     request = captured["request"]
@@ -41,6 +43,12 @@ def test_challenge_notification_posts_competition_details(monkeypatch):
     assert request.get_header("Content-type") == "application/json"
     assert json.loads(request.data) == {
         "type": "message",
+        "challenge_id": 17,
+        "challenger_name": "Jules",
+        "challenger_email": "jules@example.com",
+        "challenged_name": "Yasmine",
+        "challenged_email": "yasmine@example.com",
+        "deadline_at": deadline.isoformat(),
         "attachments": [
             {
                 "contentType": "application/vnd.microsoft.card.adaptive",
