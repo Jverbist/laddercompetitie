@@ -61,8 +61,8 @@ def send_challenge_notification(
         method="POST",
     )
     try:
-        with urlopen(request, timeout=5):
-            pass
+        with urlopen(request, timeout=5) as response:
+            logger.warning("Teams challenge notification sent (HTTP %s).", response.getcode())
     except HTTPError as exc:
         logger.error("Teams challenge notification failed with HTTP status %s.", exc.code)
     except (URLError, TimeoutError):

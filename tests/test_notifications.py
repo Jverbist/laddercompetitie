@@ -14,6 +14,9 @@ def test_challenge_notification_posts_competition_details(monkeypatch):
         def __exit__(self, *args):
             return False
 
+        def getcode(self):
+            return 202
+
     def fake_urlopen(request, timeout):
         captured["request"] = request
         captured["timeout"] = timeout
