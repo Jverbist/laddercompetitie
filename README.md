@@ -124,11 +124,14 @@ QUALIFICATION_DEADLINE=2026-11-13T23:59:59+01:00
 REGISTRATION_ENABLED=true
 REGISTRATION_EMAIL_DOMAINS=exclusive-networks.be
 TEAMS_WEBHOOK_URL=
+TEAMS_EMAIL_DOMAIN_MAP=
 ```
 
 Zet `SESSION_HTTPS_ONLY=true` pas aan nadat HTTPS werkt, anders lukt het aanmelden niet. `REGISTRATION_EMAIL_DOMAINS` beperkt registratie tot die e-maildomeinen (kommagescheiden). Leeg betekent dat iedereen zich kan registreren. `REGISTRATION_ENABLED=false` schakelt registratie uit.
 
 Optioneel: zet `TEAMS_WEBHOOK_URL` op de URL van een Power Automate Teams-webhook-flow. Bij elke nieuwe uitdaging stuurt de app een Adaptive Card met de namen, ladderposities, deadline en het uitdaging-ID. Bewaar deze URL alleen in `.env` op de server; deel of commit hem niet. Herstart daarna de service met `sudo systemctl restart laddercompetitie`.
+
+De payload bevat ook de namen en e-mailadressen van uitdager en uitgedaagde, en een mention van de uitgedaagde. Wijkt het Teams-account af van het opgeslagen adres, zet dan `TEAMS_EMAIL_DOMAIN_MAP=exclusive-networks.be=exclusive-networks.com` (meerdere paren gescheiden door komma's).
 
 ### 3. Database voorbereiden
 

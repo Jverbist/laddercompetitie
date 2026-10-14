@@ -15,6 +15,7 @@ class Settings(BaseSettings):
     registration_email_domains: str = ""
     teams_webhook_url: str = ""
     rss_feed_token: str = ""
+    teams_email_domain_map: str = ""
     qualification_deadline: datetime = datetime.fromisoformat("2026-11-13T23:59:59+01:00")
     final_day_start: datetime = datetime.fromisoformat("2026-10-16T09:00:00+02:00")
 
@@ -27,6 +28,11 @@ class Settings(BaseSettings):
     @property
     def registration_domain_set(self) -> set[str]:
         return {d.strip().lower().lstrip("@") for d in self.registration_email_domains.split(",") if d.strip()}
+
+    @property
+    def teams_email_domains(self) -> dict[str, str]:
+        pairs = (item.split("=", 1) for item in self.teams_email_domain_map.split(",") if "=" in item)
+        return {a.strip().lower().lstrip("@"): b.strip().lower().lstrip("@") for a, b in pairs}
 
     @property
     def allowed_host_list(self) -> list[str]:

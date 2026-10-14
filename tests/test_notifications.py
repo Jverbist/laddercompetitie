@@ -90,3 +90,10 @@ def test_challenge_notification_posts_competition_details(monkeypatch):
             }
         ],
     }
+
+
+def test_map_email_domain(monkeypatch):
+    monkeypatch.setattr(notifications.settings, "teams_email_domain_map", "exclusive-networks.be=exclusive-networks.com")
+    assert notifications.map_email_domain("a@Exclusive-Networks.be") == "a@exclusive-networks.com"
+    assert notifications.map_email_domain("a@other.org") == "a@other.org"
+    assert notifications.map_email_domain("") == ""

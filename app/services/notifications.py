@@ -4,7 +4,14 @@ from datetime import datetime
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 
+from app.core.config import settings
+
 logger = logging.getLogger(__name__)
+
+
+def map_email_domain(email: str) -> str:
+    local, _, domain = email.rpartition("@")
+    return f"{local}@{settings.teams_email_domains.get(domain.lower(), domain)}" if local else email
 
 
 def send_challenge_notification(
@@ -19,6 +26,8 @@ def send_challenge_notification(
     challenger_email: str = "",
     challenged_email: str = "",
 ) -> None:
+    challenger_email = map_email_domain(challenger_email)
+    challenged_email = map_email_domain(challenged_email)
     mention_text = challenged_name
     mention_entities: dict = {}
     if challenged_email:
