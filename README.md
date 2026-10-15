@@ -248,7 +248,15 @@ In `/admin` staat onder "Gevarenzone" de knop **Reset en schud de ladder**. Die 
 - De uitdager kiest een tegenstander tot vijf plaatsen hoger. De uitgedaagde kiest het spel.
 - Na een afgeronde wedstrijd moet je twee andere wedstrijden spelen voor je dezelfde tegenstander opnieuw mag uitdagen (`REMATCH_COOLDOWN_TURNS` in `app/services/competition.py`).
 - Nieuwe spelers beginnen onderaan de ladder.
-- Het dashboard heeft een spelregelpagina op `/regels`, en het beheerpaneel toont alle uitdagingen met hun winnaar.
+- Het dashboard heeft een uitlegpagina op `/uitleg` (van uitdaging tot ranking), een spelregelpagina op `/regels`, en het beheerpaneel toont alle uitdagingen met hun winnaar.
+
+## Planning van de competitie
+
+De data staan in `.env`: `REGISTRATION_START` (registratie opent), `COMPETITION_START` (uitdagen mogelijk) en `QUALIFICATION_DEADLINE` (einde). Aanmelden kan altijd. Wie later registreert, start onderaan de ladder. Doe vóór de start een admin-reset zodat testuitdagingen verdwijnen.
+
+## Meldingen in Teams
+
+Er zijn twee routes. `TEAMS_WEBHOOK_URL` is een flow met de trigger *When an HTTP request is received* (premium-licentie van de flow-eigenaar) en geeft een directe melding met mention. De back-up is de RSS-feed op `/feed/<RSS_FEED_TOKEN>.xml` met een Teams Workflows-sjabloon, wat vertraagd werkt. Gebruik niet beide tegelijk, anders komen berichten dubbel binnen. De payload bevat `challenger_email` en `challenged_email`. `TEAMS_EMAIL_DOMAIN_MAP` vervangt een domein (bijvoorbeeld `.be` door `.com`) voor de mention.
 
 ## Volgende bouwstappen
 

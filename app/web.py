@@ -272,6 +272,15 @@ def rules_page(request: Request):
         return templates.TemplateResponse(request, "rules.html", {"user": user, "games": games, "deadline": settings.qualification_deadline, "end_label": _date_label(settings.qualification_deadline)})
 
 
+@router.get("/uitleg")
+def guide_page(request: Request):
+    with SessionLocal() as db:
+        user = _signed_in(request, db)
+        if isinstance(user, RedirectResponse):
+            return user
+        return templates.TemplateResponse(request, "guide.html", {"user": user, "start_label": _date_label(settings.competition_start), "end_label": _date_label(settings.qualification_deadline)})
+
+
 @router.get("/admin")
 def admin_console(request: Request):
     with SessionLocal() as db:

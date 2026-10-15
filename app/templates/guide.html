@@ -1,0 +1,11 @@
+{% extends "base.html" %}{% block title %}Uitleg{% endblock %}{% block body %}
+<header class="header"><a class="brand" href="/dashboard"><img class="logo" src="/static/exn-logo-white.svg" alt="Exclusive Networks"><span>Laddercompetitie</span></a><nav class="nav"><a href="/dashboard">Dashboard</a><a class="button alt" href="/regels">Spelregels</a>{% if user.role.value=="admin" %}<a href="/admin">Beheer</a>{% endif %}<form method="post" action="/logout"><button class="button ghost">Afmelden</button></form></nav></header>
+<main class="page"><section class="hero"><article class="card"><p class="eyebrow">Hoe werkt het?</p><h1>Uitleg van het platform</h1><p class="muted">In vijf stappen van uitdaging tot nieuwe ranking. De regels zelf staan op de pagina Spelregels.</p></article><aside class="card deadline"><p class="eyebrow">Planning</p><strong>{{start_label}} - {{end_label}}</strong><p>Uitdagen kan vanaf {{start_label}} tot en met {{end_label}}.</p></aside></section>
+<article class="card"><ol class="rules">
+<li><div><h3>1. Registreer en meld aan</h3><p>Maak een account met je bedrijfsmailadres. Je start onderaan de ladder, ook als je later instapt. Je kan altijd aanmelden, ook voor de competitie start.</p></div></li>
+<li><div><h3>2. Daag een collega uit</h3><p>Kies op je dashboard een tegenstander tot 5 plaatsen boven je. Daarna zijn jullie allebei bezet. De uitgedaagde krijgt een bericht in Teams.</p></div></li>
+<li><div><h3>3. De uitgedaagde kiest het spel</h3><p>Open je uitdaging en kies een spel uit de lijst. Je hebt 48 uur om te spelen. De resterende tijd staat op je dashboard.</p></div></li>
+<li><div><h3>4. Vul het resultaat in en bevestig het</h3><p>Na de wedstrijd vult één speler de winnaar in. De ander bevestigt, en pas dan telt het resultaat.</p></div></li>
+<li><div><h3>5. De ladder wordt bijgewerkt</h3><p>Wint de uitdager, dan wisselen jullie van plaats. Anders blijft alles staan. Daarna ben je weer vrij om uit te dagen. Dezelfde tegenstander mag pas weer na twee andere wedstrijden.</p></div></li>
+<li><div><h3>Goed om te weten</h3><p>Verloopt de deadline zonder bevestigd resultaat, dan wint de uitdager automatisch (forfeit). Beheerders kunnen bij twijfel een uitdaging annuleren of een speler blokkeren. De Top 10 op {{end_label}} gaat naar de finale.</p></div></li>
+</ol></article></main>{% endblock %}
