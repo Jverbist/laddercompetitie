@@ -239,6 +239,20 @@ with SessionLocal.begin() as db:
 
 Een nieuw spel toevoeg je aan `STANDARD_GAMES` in `scripts/seed.py` en je voert daarna `scripts/seed.py` uit.
 
+### Dagelijkse back-up
+
+`deploy/backup.sh` maakt een consistente kopie van de database in `~/laddercompetitie/backups/` en verwijdert kopieën ouder dan 14 dagen (`KEEP_DAYS`). Inschakelen op de VM:
+
+```bash
+cd ~/laddercompetitie
+chmod +x deploy/backup.sh
+mkdir -p backups
+deploy/backup.sh                 # eenmalige test
+crontab -e                       # plak de regel uit deploy/laddercompetitie.cron
+```
+
+Terugzetten: `sudo systemctl stop laddercompetitie`, kopieer de gewenste back-up naar `laddercompetitie.db` en start de service opnieuw. De back-ups staan op dezelfde VM; kopieer ze regelmatig ook elders naartoe.
+
 ### Competitie resetten
 
 In `/admin` staat onder "Gevarenzone" de knop **Reset en schud de ladder**. Die verwijdert alle uitdagingen en plaatst alle spelers in een willekeurige volgorde. Maak vooraf een back-up met `cp laddercompetitie.db laddercompetitie.db.bak`. De reset kan niet ongedaan gemaakt worden.

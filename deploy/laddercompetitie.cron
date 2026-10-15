@@ -1,0 +1,2 @@
+# Dagelijkse back-up om 02:00 (installeren met: crontab -e)
+0 2 * * * /home/ubuntu/laddercompetitie/deploy/backup.sh >> /home/ubuntu/laddercompetitie/backups/backup.log 2>&1
