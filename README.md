@@ -120,6 +120,8 @@ ADMIN_BOOTSTRAP_PASSWORD=een-uniek-wachtwoord-van-minstens-12-tekens
 SESSION_SECRET=een-lange-willekeurige-string
 ALLOWED_HOSTS=ctf.exn.be
 SESSION_HTTPS_ONLY=true
+REGISTRATION_START=2026-10-16T00:00:00+02:00
+COMPETITION_START=2026-10-19T00:00:00+02:00
 QUALIFICATION_DEADLINE=2026-11-13T23:59:59+01:00
 REGISTRATION_ENABLED=true
 REGISTRATION_EMAIL_DOMAINS=exclusive-networks.be
@@ -128,6 +130,8 @@ TEAMS_EMAIL_DOMAIN_MAP=
 ```
 
 Zet `SESSION_HTTPS_ONLY=true` pas aan nadat HTTPS werkt, anders lukt het aanmelden niet. `REGISTRATION_EMAIL_DOMAINS` beperkt registratie tot die e-maildomeinen (kommagescheiden). Leeg betekent dat iedereen zich kan registreren. `REGISTRATION_ENABLED=false` schakelt registratie uit.
+
+Registratie opent op `REGISTRATION_START`, uitdagen kan vanaf `COMPETITION_START` tot en met `QUALIFICATION_DEADLINE`.
 
 Optioneel: zet `TEAMS_WEBHOOK_URL` op de URL van een Power Automate Teams-webhook-flow. Bij elke nieuwe uitdaging stuurt de app een Adaptive Card met de namen, ladderposities, deadline en het uitdaging-ID. Bewaar deze URL alleen in `.env` op de server; deel of commit hem niet. Herstart daarna de service met `sudo systemctl restart laddercompetitie`.
 

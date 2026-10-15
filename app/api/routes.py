@@ -92,6 +92,9 @@ def start_challenge(
     db: DbSession,
     user: CurrentUser,
 ) -> Challenge:
+    now = datetime.now(settings.qualification_deadline.tzinfo)
+    if not settings.competition_running(now):
+        raise HTTPException(status_code=409, detail="The competition is not running.")
     challenge = create_challenge(
         db,
         challenger_id=user.id,

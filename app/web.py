@@ -36,6 +36,14 @@ def _now() -> datetime:
     return datetime.now(settings.qualification_deadline.tzinfo)
 
 
+def _ensure_competition_running() -> None:
+    now = _now()
+    if now < settings.competition_start:
+        raise HTTPException(status_code=409, detail=f"De competitie start op {_date_label(settings.competition_start)}.")
+    if now > settings.qualification_deadline:
+        raise HTTPException(status_code=409, detail="De competitie is afgelopen.")
+
+
 def _time_left(deadline: datetime) -> str:
     if deadline.tzinfo is None:
         # SQLite drops the timezone; values were stored in the configured timezone.
@@ -94,7 +102,7 @@ def home(request: Request):
 
 @router.get("/login")
 def login_page(request: Request):
-    return templates.TemplateResponse(request, "login.html", {"error": None, "registration_enabled": settings.registration_enabled})
+    return templates.TemplateResponse(request, "login.html", {"error": None, "registration_enabled": settings.registration_open(_now())})
 
 
 @router.post("/login")
@@ -102,7 +110,7 @@ def login(request: Request, email: str = Form(), password: str = Form()):
     with SessionLocal() as db:
         user = db.scalar(select(User).where(User.email == email.lower()))
         if user is None or not user.is_active or not verify_password(password, user.password_hash):
-            return templates.TemplateResponse(request, "login.html", {"error": "Ongeldig e-mailadres of wachtwoord.", "registration_enabled": settings.registration_enabled}, status_code=401)
+            return templates.TemplateResponse(request, "login.html", {"error": "Ongeldig e-mailadres of wachtwoord.", "registration_enabled": settings.registration_open(_now())}, status_code=401)
         request.session["user_id"] = user.id
         return _redirect("/change-password" if user.must_reset_password else "/dashboard")
 
@@ -113,7 +121,7 @@ def _register_page(request: Request, error: str | None = None, status_code: int 
 
 @router.get("/register")
 def register_page(request: Request):
-    if not settings.registration_enabled:
+    if not settings.registration_open(_now()):
         raise HTTPException(status_code=404)
     return _register_page(request)
 
@@ -126,7 +134,7 @@ def register(
     password: str = Form(),
     confirm_password: str = Form(),
 ):
-    if not settings.registration_enabled:
+    if not settings.registration_open(_now()):
         raise HTTPException(status_code=404)
     email = email.strip().lower()
     domains = settings.registration_domain_set
@@ -184,6 +192,7 @@ def start_challenge_page(request: Request, background_tasks: BackgroundTasks, ch
         if isinstance(user, RedirectResponse):
             return user
         try:
+            _ensure_competition_running()
             challenge = create_challenge(db, challenger_id=user.id, challenged_id=challenged_id, now=_now())
             notification = {
                 "challenge_id": challenge.id,

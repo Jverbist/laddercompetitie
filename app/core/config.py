@@ -16,10 +16,18 @@ class Settings(BaseSettings):
     teams_webhook_url: str = ""
     rss_feed_token: str = ""
     teams_email_domain_map: str = ""
+    registration_start: datetime = datetime.fromisoformat("2026-10-16T00:00:00+02:00")
+    competition_start: datetime = datetime.fromisoformat("2026-10-19T00:00:00+02:00")
     qualification_deadline: datetime = datetime.fromisoformat("2026-11-13T23:59:59+01:00")
     final_day_start: datetime = datetime.fromisoformat("2026-10-16T09:00:00+02:00")
 
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
+
+    def registration_open(self, now: datetime) -> bool:
+        return self.registration_enabled and self.registration_start <= now <= self.qualification_deadline
+
+    def competition_running(self, now: datetime) -> bool:
+        return self.competition_start <= now <= self.qualification_deadline
 
     @property
     def admin_email_set(self) -> set[str]:

@@ -97,3 +97,16 @@ def test_map_email_domain(monkeypatch):
     assert notifications.map_email_domain("a@Exclusive-Networks.be") == "a@exclusive-networks.com"
     assert notifications.map_email_domain("a@other.org") == "a@other.org"
     assert notifications.map_email_domain("") == ""
+
+
+def test_registration_and_competition_windows(monkeypatch):
+    from datetime import datetime
+    from app.core.config import settings
+
+    monkeypatch.setattr(settings, "registration_enabled", True)
+    tz = settings.qualification_deadline.tzinfo
+    assert not settings.registration_open(datetime(2026, 10, 15, 12, tzinfo=tz))
+    assert settings.registration_open(datetime(2026, 10, 16, 0, 1, tzinfo=tz))
+    assert not settings.competition_running(datetime(2026, 10, 18, 12, tzinfo=tz))
+    assert settings.competition_running(datetime(2026, 10, 19, 0, 1, tzinfo=tz))
+    assert not settings.competition_running(datetime(2026, 11, 14, 0, 1, tzinfo=tz))
