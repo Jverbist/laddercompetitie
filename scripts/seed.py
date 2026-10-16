@@ -9,7 +9,7 @@ from app.core.security import hash_password
 from app.db import Base, SessionLocal, engine
 from app.models import Game, User, UserRole
 
-STANDARD_GAMES = ("Pool", "1 leg darts", "4 op een rij", "Wie is het", "Bowling", "Mikado", "Water pong", "Twister")
+STANDARD_GAMES = ("Pool", "1 leg darts", "4 op een rij", "Wie is het", "Bowling", "Mikado", "Water pong")
 
 
 def main(*, reset_admin_passwords: bool = False) -> None:
@@ -23,6 +23,9 @@ def main(*, reset_admin_passwords: bool = False) -> None:
                 db.add(Game(name=name))
             elif name == "Bowling":
                 game.is_active = True
+        twister = db.scalar(select(Game).where(Game.name == "Twister"))
+        if twister is not None:
+            twister.is_active = False
         for email in sorted(settings.admin_email_set):
             admin = db.scalar(select(User).where(User.email == email))
             if admin is None:
