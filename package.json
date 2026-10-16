@@ -1,0 +1,7 @@
+{
+  "name": "laddercompetitie",
+  "private": true,
+  "dependencies": {
+    "animejs": "^4.5.0"
+  }
+}

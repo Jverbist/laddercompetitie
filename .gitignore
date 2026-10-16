@@ -9,6 +9,7 @@ htmlcov/
 # Virtual environments and build artifacts
 .venv/
 venv/
+node_modules/
 *.egg-info/
 build/
 dist/

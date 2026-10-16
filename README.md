@@ -19,6 +19,8 @@ tests/
   test_competition.py  kernregels van de ladder
 ```
 
+De interface gebruikt Anime.js 4 voor decoratieve achtergrondbewegingen, kaartintro's en knopfeedback. De browserbestanden staan lokaal in `app/static/vendor/`; er is geen runtime-aanroep naar een externe CDN. Animaties worden uitgeschakeld bij `prefers-reduced-motion`. De upstream MIT-licentie staat naast de vendored library.
+
 De routes bevatten zo weinig mogelijk logica. Elke regel die de uitkomst van de competitie beïnvloedt staat in `app/services/competition.py`, zodat deze één keer wordt geïmplementeerd en rechtstreeks getest kan worden.
 
 ## Stap voor stap starten
