@@ -1,8 +1,10 @@
 from datetime import datetime
+from io import BytesIO
 from pathlib import Path
 
+import qrcode
 from fastapi import APIRouter, BackgroundTasks, Form, HTTPException, Request
-from fastapi.responses import RedirectResponse
+from fastapi.responses import RedirectResponse, Response
 from fastapi.templating import Jinja2Templates
 from sqlalchemy import func, or_, select
 from sqlalchemy.exc import IntegrityError
@@ -124,6 +126,14 @@ def register_page(request: Request):
     if not settings.registration_open(_now()):
         raise HTTPException(status_code=404)
     return _register_page(request)
+
+
+@router.get("/register/qr.png")
+def registration_qr() -> Response:
+    image = qrcode.make("https://ctf.exn.be/register")
+    output = BytesIO()
+    image.save(output, format="PNG")
+    return Response(output.getvalue(), media_type="image/png")
 
 
 @router.post("/register")

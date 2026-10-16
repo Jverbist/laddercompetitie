@@ -262,7 +262,8 @@ In `/admin` staat onder "Gevarenzone" de knop **Reset en schud de ladder**. Die 
 - De uitdager kiest een tegenstander tot vijf plaatsen hoger. De uitgedaagde kiest het spel.
 - Na een afgeronde wedstrijd moet je twee andere wedstrijden spelen voor je dezelfde tegenstander opnieuw mag uitdagen (`REMATCH_COOLDOWN_TURNS` in `app/services/competition.py`).
 - Nieuwe spelers beginnen onderaan de ladder.
-- Het dashboard heeft een uitlegpagina op `/uitleg` (van uitdaging tot ranking), een spelregelpagina op `/regels`, en het beheerpaneel toont alle uitdagingen met hun winnaar.
+- Het dashboard heeft een QR-code naar `https://ctf.exn.be/register` voor presentaties, een uitlegpagina op `/uitleg` (van uitdaging tot ranking), een spelregelpagina op `/regels`, en het beheerpaneel toont alle uitdagingen met hun winnaar.
+- De standaardspellen, waaronder Bowling, staan in `scripts/seed.py`. Na het bijwerken daarvan voer je `.venv/bin/python scripts/seed.py` uit om ontbrekende spellen aan de database toe te voegen.
 
 ## Planning van de competitie
 
