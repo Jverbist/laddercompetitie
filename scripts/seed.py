@@ -18,8 +18,11 @@ def main(*, reset_admin_passwords: bool = False) -> None:
     Base.metadata.create_all(engine)
     with SessionLocal.begin() as db:
         for name in STANDARD_GAMES:
-            if db.scalar(select(Game).where(Game.name == name)) is None:
+            game = db.scalar(select(Game).where(Game.name == name))
+            if game is None:
                 db.add(Game(name=name))
+            elif name == "Bowling":
+                game.is_active = True
         for email in sorted(settings.admin_email_set):
             admin = db.scalar(select(User).where(User.email == email))
             if admin is None:
