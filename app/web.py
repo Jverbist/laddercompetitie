@@ -19,6 +19,7 @@ from app.services.competition import (
     confirm_result,
     cooldown_opponent_ids,
     create_challenge,
+    expire_overdue_challenges,
     is_available,
     register_user,
     reset_competition,
@@ -64,6 +65,8 @@ def _date_label(value: datetime) -> str:
 
 
 def _dashboard_data(db, user: User, error: str | None = None) -> dict:
+    if expire_overdue_challenges(db, now=_now()):
+        db.commit()
     ranking = list(db.scalars(select(User).where(User.is_active).order_by(User.rank)))
     active = list(db.scalars(select(Challenge).where(
         Challenge.status.in_((ChallengeStatus.ACTIVE, ChallengeStatus.RESULT_PENDING)),
