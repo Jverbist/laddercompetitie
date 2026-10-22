@@ -11,6 +11,7 @@ from app.services.competition import (
     cooldown_opponent_ids,
     create_challenge,
     expire_overdue_challenges,
+    admin_resolve_challenge,
     forfeit_challenge,
     is_available,
     submit_result,
@@ -187,3 +188,15 @@ def test_challenged_player_can_forfeit(db):
     forfeit_challenge(db, challenge_id=challenge.id, user_id=amber.id, now=NOW)
     assert challenge.status is ChallengeStatus.FORFEIT
     assert (john.rank, amber.rank) == (1, 3)
+
+
+def test_admin_can_set_winner_force_forfeit_and_cancel(db):
+    (amber, john, noor), _ = add_players(db)
+    first = create_challenge(db, challenger_id=john.id, challenged_id=amber.id, now=NOW)
+    admin_resolve_challenge(db, challenge_id=first.id, action="winner", winner_id=john.id, now=NOW)
+    assert first.status is ChallengeStatus.COMPLETED and (john.rank, amber.rank) == (1, 3)
+    with pytest.raises(HTTPException):
+        admin_resolve_challenge(db, challenge_id=first.id, action="cancel", now=NOW)
+    second = create_challenge(db, challenger_id=noor.id, challenged_id=amber.id, now=NOW)
+    admin_resolve_challenge(db, challenge_id=second.id, action="forfeit", now=NOW)
+    assert second.status is ChallengeStatus.FORFEIT and noor.rank == 3

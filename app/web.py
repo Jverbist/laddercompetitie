@@ -1,6 +1,7 @@
 from datetime import datetime
 from io import BytesIO
 from pathlib import Path
+from urllib.parse import quote
 
 import qrcode
 from fastapi import APIRouter, BackgroundTasks, Form, HTTPException, Request
@@ -19,6 +20,7 @@ from app.services.competition import (
     confirm_result,
     cooldown_opponent_ids,
     create_challenge,
+    admin_resolve_challenge,
     expire_overdue_challenges,
     forfeit_challenge,
     is_available,
@@ -329,6 +331,23 @@ def admin_console(request: Request):
         if user.role is not UserRole.ADMIN:
             raise HTTPException(status_code=403, detail="Administrator permission required.")
         return templates.TemplateResponse(request, "admin.html", {"user": user, "users": list(db.scalars(select(User).order_by(User.rank))), "games": list(db.scalars(select(Game).order_by(Game.name))), "challenges": list(db.scalars(select(Challenge).order_by(Challenge.created_at.desc(), Challenge.id.desc()))), "winners": {u.id: u.name for u in db.scalars(select(User))}, "message": request.query_params.get("success"), "error": request.query_params.get("error")})
+
+
+@router.post("/admin/challenges/{challenge_id}")
+def admin_challenge_action(request: Request, challenge_id: int, action: str = Form(), winner_id: int | None = Form(None)):
+    with SessionLocal() as db:
+        user = _signed_in(request, db)
+        if isinstance(user, RedirectResponse):
+            return user
+        if user.role is not UserRole.ADMIN:
+            raise HTTPException(status_code=403, detail="Administrator permission required.")
+        try:
+            admin_resolve_challenge(db, challenge_id=challenge_id, action=action, winner_id=winner_id, now=_now())
+            db.commit()
+        except HTTPException as exception:
+            db.rollback()
+            return _redirect(f"/admin?error={quote(str(exception.detail))}")
+    return _redirect("/admin?success=Uitdaging+aangepast")
 
 
 @router.post("/admin/reset")

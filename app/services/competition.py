@@ -168,6 +168,30 @@ def forfeit_challenge(db: Session, *, challenge_id: int, user_id: int, now: date
     return challenge
 
 
+def admin_resolve_challenge(
+    db: Session, *, challenge_id: int, action: str, now: datetime, winner_id: int | None = None
+) -> Challenge:
+    challenge = db.scalar(select(Challenge).where(Challenge.id == challenge_id).with_for_update())
+    if challenge is None:
+        raise _not_found("Challenge")
+    if challenge.status not in OPEN_CHALLENGE_STATUSES:
+        raise HTTPException(status_code=409, detail="Only an open challenge can be changed.")
+    if action == "winner":
+        if winner_id not in (challenge.challenger_id, challenge.challenged_id):
+            raise HTTPException(status_code=422, detail="The winner must be a participant in this challenge.")
+        challenge.proposed_winner_id = winner_id
+        _complete_challenge(db, challenge, winner_id, ChallengeStatus.COMPLETED, now)
+    elif action == "forfeit":
+        _complete_challenge(db, challenge, challenge.challenger_id, ChallengeStatus.FORFEIT, now)
+    elif action == "cancel":
+        challenge.status = ChallengeStatus.CANCELLED
+        challenge.completed_at = now
+        db.flush()
+    else:
+        raise HTTPException(status_code=422, detail="Unknown action.")
+    return challenge
+
+
 def expire_overdue_challenges(db: Session, *, now: datetime) -> list[Challenge]:
     overdue = list(
         db.scalars(
