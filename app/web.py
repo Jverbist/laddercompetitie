@@ -20,6 +20,7 @@ from app.services.competition import (
     cooldown_opponent_ids,
     create_challenge,
     expire_overdue_challenges,
+    forfeit_challenge,
     is_available,
     register_user,
     reset_competition,
@@ -274,6 +275,21 @@ def confirm_result_page(request: Request, challenge_id: int):
             db.rollback()
             return templates.TemplateResponse(request, "dashboard.html", _dashboard_data(db, user, exception.detail), status_code=exception.status_code)
     return _redirect("/dashboard?success=Resultaat+bevestigd")
+
+
+@router.post("/dashboard/challenges/{challenge_id}/forfeit")
+def forfeit_challenge_page(request: Request, challenge_id: int):
+    with SessionLocal() as db:
+        user = _signed_in(request, db)
+        if isinstance(user, RedirectResponse):
+            return user
+        try:
+            forfeit_challenge(db, challenge_id=challenge_id, user_id=user.id, now=_now())
+            db.commit()
+        except HTTPException as exception:
+            db.rollback()
+            return templates.TemplateResponse(request, "dashboard.html", _dashboard_data(db, user, exception.detail), status_code=exception.status_code)
+    return _redirect("/dashboard?success=Je+hebt+opgegeven")
 
 
 @router.get("/regels")

@@ -156,6 +156,18 @@ def confirm_result(
     return challenge
 
 
+def forfeit_challenge(db: Session, *, challenge_id: int, user_id: int, now: datetime) -> Challenge:
+    challenge = db.scalar(select(Challenge).where(Challenge.id == challenge_id).with_for_update())
+    if challenge is None:
+        raise _not_found("Challenge")
+    if challenge.challenged_id != user_id:
+        raise HTTPException(status_code=403, detail="Only the challenged participant can forfeit.")
+    if challenge.status is not ChallengeStatus.ACTIVE:
+        raise HTTPException(status_code=409, detail="This challenge can no longer be forfeited.")
+    _complete_challenge(db, challenge, challenge.challenger_id, ChallengeStatus.FORFEIT, now)
+    return challenge
+
+
 def expire_overdue_challenges(db: Session, *, now: datetime) -> list[Challenge]:
     overdue = list(
         db.scalars(

@@ -11,6 +11,7 @@ from app.services.competition import (
     cooldown_opponent_ids,
     create_challenge,
     expire_overdue_challenges,
+    forfeit_challenge,
     is_available,
     submit_result,
 )
@@ -175,3 +176,14 @@ def test_scoreboard_counts_wins_and_streaks(db):
     html = templates.get_template("scoreboard.html").render(user=john, board=board)
     assert "<strong>John</strong>" in html and "Amber" in html
     assert board.games[0]["name"] == "Pool"
+
+
+def test_challenged_player_can_forfeit(db):
+    (amber, john, _), _ = add_players(db)
+    challenge = create_challenge(db, challenger_id=john.id, challenged_id=amber.id, now=NOW)
+    with pytest.raises(HTTPException) as error:
+        forfeit_challenge(db, challenge_id=challenge.id, user_id=john.id, now=NOW)
+    assert error.value.status_code == 403
+    forfeit_challenge(db, challenge_id=challenge.id, user_id=amber.id, now=NOW)
+    assert challenge.status is ChallengeStatus.FORFEIT
+    assert (john.rank, amber.rank) == (1, 3)
