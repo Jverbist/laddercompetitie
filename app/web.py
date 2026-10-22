@@ -1,3 +1,4 @@
+import secrets
 from datetime import datetime
 from io import BytesIO
 from pathlib import Path
@@ -330,7 +331,30 @@ def admin_console(request: Request):
             return user
         if user.role is not UserRole.ADMIN:
             raise HTTPException(status_code=403, detail="Administrator permission required.")
-        return templates.TemplateResponse(request, "admin.html", {"user": user, "users": list(db.scalars(select(User).order_by(User.rank))), "games": list(db.scalars(select(Game).order_by(Game.name))), "challenges": list(db.scalars(select(Challenge).order_by(Challenge.created_at.desc(), Challenge.id.desc()))), "winners": {u.id: u.name for u in db.scalars(select(User))}, "message": request.query_params.get("success"), "error": request.query_params.get("error")})
+        return templates.TemplateResponse(request, "admin.html", _admin_data(db, user, request))
+
+
+def _admin_data(db, user: User, request: Request, **extra) -> dict:
+    return {"user": user, "users": list(db.scalars(select(User).order_by(User.rank))), "games": list(db.scalars(select(Game).order_by(Game.name))), "challenges": list(db.scalars(select(Challenge).order_by(Challenge.created_at.desc(), Challenge.id.desc()))), "winners": {u.id: u.name for u in db.scalars(select(User))}, "message": request.query_params.get("success"), "error": request.query_params.get("error"), "temp_password": None, **extra}
+
+
+@router.post("/admin/users/{user_id}/reset-password")
+def admin_reset_password(request: Request, user_id: int):
+    with SessionLocal() as db:
+        user = _signed_in(request, db)
+        if isinstance(user, RedirectResponse):
+            return user
+        if user.role is not UserRole.ADMIN:
+            raise HTTPException(status_code=403, detail="Administrator permission required.")
+        target = db.get(User, user_id)
+        if target is None:
+            return _redirect("/admin?error=Gebruiker+niet+gevonden")
+        temp_password = secrets.token_urlsafe(9)
+        target.password_hash, target.must_reset_password = hash_password(temp_password), True
+        db.commit()
+        response = templates.TemplateResponse(request, "admin.html", _admin_data(db, user, request, temp_password=temp_password, temp_name=target.name))
+        response.headers["Cache-Control"] = "no-store"
+        return response
 
 
 @router.post("/admin/challenges/{challenge_id}")
