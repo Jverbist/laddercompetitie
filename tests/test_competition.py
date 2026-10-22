@@ -170,3 +170,7 @@ def test_scoreboard_counts_wins_and_streaks(db):
     assert board.most_wins[0].user.name == "John" and board.most_wins[0].wins == 1
     assert board.streaks[0].current_streak == 1
     assert board.climbers[0].climbed == 2
+    from app.web import templates
+
+    html = templates.get_template("scoreboard.html").render(user=john, board=board)
+    assert "John</strong> won van Amber" in html
