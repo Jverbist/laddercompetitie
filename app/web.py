@@ -25,6 +25,7 @@ from app.services.competition import (
     reset_competition,
     submit_result,
 )
+from app.services.scoreboard import build_scoreboard
 from app.services.notifications import send_challenge_notification
 
 templates = Jinja2Templates(directory=str(Path(__file__).parent / "templates"))
@@ -283,6 +284,15 @@ def rules_page(request: Request):
             return user
         games = list(db.scalars(select(Game).where(Game.is_active).order_by(Game.name)))
         return templates.TemplateResponse(request, "rules.html", {"user": user, "games": games, "deadline": settings.qualification_deadline, "end_label": _date_label(settings.qualification_deadline)})
+
+
+@router.get("/scoreboard")
+def scoreboard_page(request: Request):
+    with SessionLocal() as db:
+        user = _signed_in(request, db)
+        if isinstance(user, RedirectResponse):
+            return user
+        return templates.TemplateResponse(request, "scoreboard.html", {"user": user, "board": build_scoreboard(db)})
 
 
 @router.get("/uitleg")

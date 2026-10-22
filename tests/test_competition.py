@@ -155,3 +155,18 @@ def test_reset_removes_challenges_and_reshuffles_all_ranks(db):
     assert db.query(Challenge).count() == 0
     assert sorted(user.rank for user in (amber, john, noor)) == [1, 2, 3]
     assert is_available(db, amber) and is_available(db, john)
+
+
+def test_scoreboard_counts_wins_and_streaks(db):
+    from app.services.scoreboard import build_scoreboard
+
+    (amber, john, _), game = add_players(db)
+    challenge = create_challenge(db, challenger_id=john.id, challenged_id=amber.id, now=NOW)
+    choose_game(db, challenge_id=challenge.id, chooser_id=amber.id, game_id=game.id)
+    submit_result(db, challenge_id=challenge.id, submitter_id=john.id, winner_id=john.id)
+    confirm_result(db, challenge_id=challenge.id, confirmer_id=amber.id, now=NOW)
+    board = build_scoreboard(db)
+    assert board.played == 1
+    assert board.most_wins[0].user.name == "John" and board.most_wins[0].wins == 1
+    assert board.streaks[0].current_streak == 1
+    assert board.climbers[0].climbed == 2

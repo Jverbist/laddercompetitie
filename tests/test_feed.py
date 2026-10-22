@@ -31,3 +31,8 @@ def test_local_animation_assets_are_served():
     library = client.get("/static/vendor/anime.umd.min.js")
     assert library.status_code == 200
     assert library.headers["content-type"].startswith("text/javascript")
+
+
+def test_scoreboard_requires_login():
+    response = TestClient(app).get("/scoreboard", follow_redirects=False)
+    assert response.status_code in (302, 303, 401)

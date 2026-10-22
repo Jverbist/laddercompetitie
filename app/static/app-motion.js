@@ -44,6 +44,34 @@
     onBegin: () => document.body.classList.add("motion-ready"),
   });
 
+  document.querySelectorAll("[data-bar]").forEach((bar, index) => {
+    animate(bar, {
+      width: ["0%", `${bar.dataset.bar}%`],
+      duration: 900,
+      delay: 250 + index * 80,
+      ease: "outExpo",
+    });
+  });
+
+  document.querySelectorAll("[data-count]").forEach((el) => {
+    const target = Number(el.dataset.count);
+    const counter = { value: 0 };
+    animate(counter, {
+      value: target,
+      duration: 1100,
+      ease: "outExpo",
+      onUpdate: () => { el.textContent = Math.round(counter.value); },
+    });
+  });
+
+  animate(".podium-step", {
+    y: [30, 0],
+    opacity: [0, 1],
+    duration: 700,
+    delay: stagger(140),
+    ease: "outBack",
+  });
+
   document.querySelectorAll(".button").forEach((button) => {
     const lift = () => animate(button, {
       y: -3,
