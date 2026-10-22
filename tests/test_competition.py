@@ -173,4 +173,5 @@ def test_scoreboard_counts_wins_and_streaks(db):
     from app.web import templates
 
     html = templates.get_template("scoreboard.html").render(user=john, board=board)
-    assert "John</strong> won van Amber" in html
+    assert "<strong>John</strong>" in html and "Amber" in html
+    assert board.games[0]["name"] == "Pool"

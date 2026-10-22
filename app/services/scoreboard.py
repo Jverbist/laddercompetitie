@@ -1,6 +1,8 @@
+from collections import Counter
 from dataclasses import dataclass, field
+from datetime import timedelta
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.models import Challenge, ChallengeStatus, User
@@ -24,6 +26,36 @@ class Scoreboard:
     climbers: list[PlayerStats] = field(default_factory=list)
     recent: list[Challenge] = field(default_factory=list)
     played: int = 0
+    players: int = 0
+    open_challenges: int = 0
+    best_streak: int = 0
+    games: list[dict] = field(default_factory=list)
+    daily: list[dict] = field(default_factory=list)
+
+
+GAME_COLORS = ("#ff9933", "#44d39d", "#4cc3ff", "#b388ff", "#ff6b8a", "#ffd166", "#7bdff2")
+
+
+def _game_segments(played: list[Challenge]) -> list[dict]:
+    counts = Counter(c.game.name if c.game else "Onbekend" for c in played)
+    total = sum(counts.values())
+    segments, offset = [], 0.0
+    for index, (name, count) in enumerate(counts.most_common()):
+        pct = count / total * 100
+        segments.append({"name": name, "count": count, "pct": round(pct), "dash": round(pct, 2), "offset": round(25 - offset, 2), "color": GAME_COLORS[index % len(GAME_COLORS)]})
+        offset += pct
+    return segments
+
+
+def _daily_activity(played: list[Challenge], days: int = 14) -> list[dict]:
+    dated = [c.completed_at.date() for c in played if c.completed_at]
+    if not dated:
+        return []
+    last = max(dated)
+    counts = Counter(dated)
+    series = [last - timedelta(days=days - 1 - i) for i in range(days)]
+    peak = max(counts[d] for d in series) or 1
+    return [{"label": f"{d.day}/{d.month}", "count": counts[d], "height": round(counts[d] / peak * 100)} for d in series]
 
 
 def build_scoreboard(db: Session, *, limit: int = 5) -> Scoreboard:
@@ -71,4 +103,9 @@ def build_scoreboard(db: Session, *, limit: int = 5) -> Scoreboard:
         climbers=sorted((p for p in players if p.climbed), key=lambda p: (-p.climbed, p.user.rank))[:limit],
         recent=list(reversed(played))[:8],
         played=len(played),
+        players=len(users),
+        open_challenges=db.scalar(select(func.count()).select_from(Challenge).where(Challenge.status.in_((ChallengeStatus.ACTIVE, ChallengeStatus.RESULT_PENDING)))) or 0,
+        best_streak=max((p.current_streak for p in players), default=0),
+        games=_game_segments(played),
+        daily=_daily_activity(played),
     )
