@@ -13,6 +13,7 @@ from app.services.competition import (
     expire_overdue_challenges,
     admin_resolve_challenge,
     forfeit_challenge,
+    remove_participant,
     is_available,
     submit_result,
 )
@@ -200,3 +201,12 @@ def test_admin_can_set_winner_force_forfeit_and_cancel(db):
     second = create_challenge(db, challenger_id=noor.id, challenged_id=amber.id, now=NOW)
     admin_resolve_challenge(db, challenge_id=second.id, action="forfeit", now=NOW)
     assert second.status is ChallengeStatus.FORFEIT and noor.rank == 3
+
+
+def test_removing_participant_closes_rank_gap_and_cancels_challenges(db):
+    (amber, john, noor), _ = add_players(db)
+    challenge = create_challenge(db, challenger_id=noor.id, challenged_id=john.id, now=NOW)
+    remove_participant(db, user_id=john.id, now=NOW)
+    assert challenge.status is ChallengeStatus.CANCELLED
+    assert not john.is_active and john.rank < 0
+    assert (amber.rank, noor.rank) == (1, 7)

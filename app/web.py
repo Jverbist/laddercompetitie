@@ -26,6 +26,7 @@ from app.services.competition import (
     forfeit_challenge,
     is_available,
     register_user,
+    remove_participant,
     reset_competition,
     submit_result,
 )
@@ -335,7 +336,7 @@ def admin_console(request: Request):
 
 
 def _admin_data(db, user: User, request: Request, **extra) -> dict:
-    return {"user": user, "users": list(db.scalars(select(User).order_by(User.rank))), "games": list(db.scalars(select(Game).order_by(Game.name))), "challenges": list(db.scalars(select(Challenge).order_by(Challenge.created_at.desc(), Challenge.id.desc()))), "winners": {u.id: u.name for u in db.scalars(select(User))}, "message": request.query_params.get("success"), "error": request.query_params.get("error"), "temp_password": None, **extra}
+    return {"user": user, "users": list(db.scalars(select(User).order_by(User.is_active.desc(), User.rank))), "games": list(db.scalars(select(Game).order_by(Game.name))), "challenges": list(db.scalars(select(Challenge).order_by(Challenge.created_at.desc(), Challenge.id.desc()))), "winners": {u.id: u.name for u in db.scalars(select(User))}, "message": request.query_params.get("success"), "error": request.query_params.get("error"), "temp_password": None, **extra}
 
 
 @router.post("/admin/users/{user_id}/reset-password")
@@ -372,6 +373,25 @@ def admin_challenge_action(request: Request, challenge_id: int, action: str = Fo
             db.rollback()
             return _redirect(f"/admin?error={quote(str(exception.detail))}")
     return _redirect("/admin?success=Uitdaging+aangepast")
+
+
+@router.post("/admin/users/{user_id}/remove")
+def admin_remove_user(request: Request, user_id: int):
+    with SessionLocal() as db:
+        user = _signed_in(request, db)
+        if isinstance(user, RedirectResponse):
+            return user
+        if user.role is not UserRole.ADMIN:
+            raise HTTPException(status_code=403, detail="Administrator permission required.")
+        if user.id == user_id:
+            return _redirect("/admin?error=Je+kunt+jezelf+niet+verwijderen")
+        try:
+            removed = remove_participant(db, user_id=user_id, now=_now())
+            db.commit()
+        except HTTPException as exception:
+            db.rollback()
+            return _redirect(f"/admin?error={quote(str(exception.detail))}")
+    return _redirect("/admin?success=" + quote(f"{removed.name} is verwijderd uit de competitie"))
 
 
 @router.post("/admin/reset")

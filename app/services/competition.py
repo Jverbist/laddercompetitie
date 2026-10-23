@@ -235,6 +235,26 @@ def _complete_challenge(
     db.flush()
 
 
+def remove_participant(db: Session, *, user_id: int, now: datetime) -> User:
+    user = db.scalar(select(User).where(User.id == user_id).with_for_update())
+    if user is None:
+        raise _not_found("User")
+    if not user.is_active:
+        raise HTTPException(status_code=409, detail="This participant is already removed.")
+    for challenge in db.scalars(_open_challenge_for_user(user.id)).all():
+        challenge.status = ChallengeStatus.CANCELLED
+        challenge.completed_at = now
+    old_rank = user.rank
+    user.is_active = False
+    # Park the removed player outside the ladder, then close the gap so rank distances stay correct.
+    user.rank = -user.id
+    db.flush()
+    for below in db.scalars(select(User).where(User.rank > old_rank).order_by(User.rank)).all():
+        below.rank -= 1
+        db.flush()
+    return user
+
+
 def reset_competition(db: Session, *, rng: random.Random | None = None) -> tuple[int, int]:
     """Remove all challenges, unblock/reactivate everyone and place them at a random rank."""
     rng = rng or random.SystemRandom()
