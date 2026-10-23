@@ -30,6 +30,7 @@ from app.services.competition import (
     reset_competition,
     submit_result,
 )
+from app.services.worktime import is_paused, working_seconds_between
 from app.services.scoreboard import build_scoreboard
 from app.services.notifications import send_challenge_notification
 
@@ -53,14 +54,16 @@ def _ensure_competition_running() -> None:
         raise HTTPException(status_code=409, detail="De competitie is afgelopen.")
 
 
-def _time_left(deadline: datetime) -> str:
+def _time_left(deadline: datetime, *, working: bool = False) -> str:
     if deadline.tzinfo is None:
         # SQLite drops the timezone; values were stored in the configured timezone.
         deadline = deadline.replace(tzinfo=settings.qualification_deadline.tzinfo)
-    seconds = max(0, int((deadline - _now()).total_seconds()))
+    now = _now()
+    seconds = working_seconds_between(now, deadline) if working else max(0, int((deadline - now).total_seconds()))
     days, seconds = divmod(seconds, 86_400)
     hours, seconds = divmod(seconds, 3_600)
-    return f"{days}d {hours}u {seconds // 60}m"
+    label = f"{days}d {hours}u {seconds // 60}m"
+    return f"{label} (gepauzeerd tot maandag 08:00)" if working and is_paused(now) else label
 
 
 _MONTHS = ("januari", "februari", "maart", "april", "mei", "juni", "juli", "augustus", "september", "oktober", "november", "december")
@@ -97,7 +100,7 @@ def _dashboard_data(db, user: User, error: str | None = None) -> dict:
         "active_challenges": active, "history": history, "eligible_opponents": opponents,
         "wins": sum(item.confirmed_winner_id == user.id for item in complete),
         "played": len(complete), "qualification_time": _time_left(settings.qualification_deadline), "end_label": _date_label(settings.qualification_deadline),
-        "time_left": {item.id: _time_left(item.deadline_at) for item in active}, "error": error,
+        "time_left": {item.id: _time_left(item.deadline_at, working=True) for item in active}, "error": error,
     }
 
 

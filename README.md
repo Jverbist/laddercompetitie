@@ -282,3 +282,11 @@ Er zijn twee routes. `TEAMS_WEBHOOK_URL` is een flow met de trigger *When an HTT
 3. Voeg Alembic-migraties toe vóór de eerste gedeelde of productieomgeving; `create_all` is geschikt voor de lokale start.
 4. Bouw een responsive frontend tegen deze API voor dashboard, ranking, uitdagingen en administratie.
 5. Voeg de finale toe als afzonderlijk, configureerbaar bracket-formaat nadat het wedstrijdschema voor de Top 10 is bepaald.
+
+## Weekendpauze
+
+De deadline van 48 uur loopt niet tijdens het weekend: de timer staat stil van vrijdag 18:00 tot maandag 08:00 (Brusselse tijd) en loopt daarna automatisch verder. De logica staat in `app/services/worktime.py`. Open uitdagingen van voor deze functie krijg je bij met:
+
+```bash
+cd ~/laddercompetitie && .venv/bin/python scripts/recalculate_deadlines.py
+```

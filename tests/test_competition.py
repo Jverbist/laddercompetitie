@@ -210,3 +210,17 @@ def test_removing_participant_closes_rank_gap_and_cancels_challenges(db):
     assert challenge.status is ChallengeStatus.CANCELLED
     assert not john.is_active and john.rank < 0
     assert (amber.rank, noor.rank) == (1, 7)
+
+
+def test_deadline_skips_weekend_pause():
+    from zoneinfo import ZoneInfo
+
+    from app.services.worktime import add_working_time, is_paused, working_seconds_between
+
+    brussels = ZoneInfo("Europe/Brussels")
+    friday = datetime(2026, 10, 23, 17, 0, tzinfo=brussels)
+    assert add_working_time(friday, timedelta(hours=48)) == datetime(2026, 10, 28, 7, 0, tzinfo=brussels)
+    assert add_working_time(datetime(2026, 10, 22, 10, 0, tzinfo=brussels), timedelta(hours=48)) == datetime(2026, 10, 27, 0, 0, tzinfo=brussels)
+    assert is_paused(datetime(2026, 10, 24, 12, 0, tzinfo=brussels))
+    assert not is_paused(datetime(2026, 10, 26, 8, 0, tzinfo=brussels))
+    assert working_seconds_between(friday, datetime(2026, 10, 26, 9, 0, tzinfo=brussels)) == 2 * 3600

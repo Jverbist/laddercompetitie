@@ -6,6 +6,7 @@ from sqlalchemy import Select, delete, func, or_, select
 from sqlalchemy.orm import Session
 
 from app.core.security import hash_password
+from app.services.worktime import add_working_time
 from app.models import Challenge, ChallengeStatus, Game, User, UserRole
 
 CHALLENGE_DURATION = timedelta(days=2)
@@ -97,7 +98,7 @@ def create_challenge(db: Session, *, challenger_id: int, challenged_id: int, now
         challenged_id=challenged.id,
         challenger_rank_at_creation=challenger.rank,
         challenged_rank_at_creation=challenged.rank,
-        deadline_at=now + CHALLENGE_DURATION,
+        deadline_at=add_working_time(now, CHALLENGE_DURATION),
     )
     db.add(challenge)
     db.flush()
