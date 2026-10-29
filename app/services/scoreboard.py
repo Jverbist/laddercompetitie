@@ -5,7 +5,7 @@ from datetime import timedelta
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from app.models import Challenge, ChallengeStatus, User
+from app.models import Challenge, ChallengeStatus, CheaterClick, User
 
 
 @dataclass
@@ -31,6 +31,7 @@ class Scoreboard:
     best_streak: int = 0
     games: list[dict] = field(default_factory=list)
     daily: list[dict] = field(default_factory=list)
+    cheaters: list[CheaterClick] = field(default_factory=list)
 
 
 GAME_COLORS = ("#ff9933", "#44d39d", "#4cc3ff", "#b388ff", "#ff6b8a", "#ffd166", "#7bdff2")
@@ -108,4 +109,5 @@ def build_scoreboard(db: Session, *, limit: int = 5) -> Scoreboard:
         best_streak=max((p.current_streak for p in players), default=0),
         games=_game_segments(played),
         daily=_daily_activity(played),
+        cheaters=list(db.scalars(select(CheaterClick).order_by(CheaterClick.first_clicked_at))),
     )

@@ -15,7 +15,7 @@ from app.api.deps import authenticated_user
 from app.core.config import settings
 from app.core.security import hash_password, verify_password
 from app.db import SessionLocal
-from app.models import Challenge, ChallengeStatus, Game, User, UserRole
+from app.models import Challenge, ChallengeStatus, CheaterClick, Game, User, UserRole
 from app.services.competition import (
     choose_game,
     confirm_result,
@@ -324,6 +324,12 @@ def cheater_page(request: Request):
         user = _signed_in(request, db)
         if isinstance(user, RedirectResponse):
             return user
+        record = db.get(CheaterClick, user.id)
+        if record is None:
+            db.add(CheaterClick(user_id=user.id, clicks=1))
+        else:
+            record.clicks += 1
+        db.commit()
         return templates.TemplateResponse(request, "cheater.html", {"user": user})
 
 

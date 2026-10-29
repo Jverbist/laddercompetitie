@@ -224,3 +224,14 @@ def test_deadline_skips_weekend_pause():
     assert is_paused(datetime(2026, 10, 24, 12, 0, tzinfo=brussels))
     assert not is_paused(datetime(2026, 10, 26, 8, 0, tzinfo=brussels))
     assert working_seconds_between(friday, datetime(2026, 10, 26, 9, 0, tzinfo=brussels)) == 2 * 3600
+
+
+def test_scoreboard_lists_cheaters(db):
+    from app.models import CheaterClick
+    from app.services.scoreboard import build_scoreboard
+
+    (amber, _, _), _ = add_players(db)
+    db.add(CheaterClick(user_id=amber.id, clicks=2))
+    db.commit()
+    board = build_scoreboard(db)
+    assert [c.user.name for c in board.cheaters] == ["Amber"] and board.cheaters[0].clicks == 2

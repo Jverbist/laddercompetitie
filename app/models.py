@@ -71,3 +71,13 @@ class Challenge(Base):
     challenger: Mapped[User] = relationship(foreign_keys=[challenger_id], back_populates="challenges_started")
     challenged: Mapped[User] = relationship(foreign_keys=[challenged_id], back_populates="challenges_received")
     game: Mapped[Game | None] = relationship()
+
+
+class CheaterClick(Base):
+    __tablename__ = "cheater_clicks"
+
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), primary_key=True)
+    clicks: Mapped[int] = mapped_column(Integer, default=1)
+    first_clicked_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+    user: Mapped[User] = relationship()
