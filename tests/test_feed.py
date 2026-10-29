@@ -41,3 +41,8 @@ def test_scoreboard_requires_login():
 def test_admin_password_reset_requires_login():
     response = TestClient(app).post("/admin/users/1/reset-password", follow_redirects=False)
     assert response.status_code in (302, 303, 401)
+
+
+def test_cheater_page_requires_login():
+    response = TestClient(app).get("/bijdrage", follow_redirects=False)
+    assert response.status_code in (302, 303, 401)

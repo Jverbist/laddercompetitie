@@ -318,6 +318,15 @@ def scoreboard_page(request: Request):
         return templates.TemplateResponse(request, "scoreboard.html", {"user": user, "board": build_scoreboard(db)})
 
 
+@router.get("/bijdrage")
+def cheater_page(request: Request):
+    with SessionLocal() as db:
+        user = _signed_in(request, db)
+        if isinstance(user, RedirectResponse):
+            return user
+        return templates.TemplateResponse(request, "cheater.html", {"user": user})
+
+
 @router.get("/uitleg")
 def guide_page(request: Request):
     with SessionLocal() as db:
