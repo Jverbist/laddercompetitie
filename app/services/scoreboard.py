@@ -16,6 +16,9 @@ class PlayerStats:
     current_streak: int = 0
     best_streak: int = 0
     climbed: int = 0
+    forfeits: int = 0
+    loss_streak: int = 0
+    worst_loss_streak: int = 0
 
 
 @dataclass
@@ -32,6 +35,7 @@ class Scoreboard:
     games: list[dict] = field(default_factory=list)
     daily: list[dict] = field(default_factory=list)
     cheaters: list[CheaterClick] = field(default_factory=list)
+    titles: list[dict] = field(default_factory=list)
 
 
 GAME_COLORS = ("#ff9933", "#44d39d", "#4cc3ff", "#b388ff", "#ff6b8a", "#ffd166", "#7bdff2")
@@ -59,6 +63,29 @@ def _daily_activity(played: list[Challenge], days: int = 14) -> list[dict]:
     return [{"label": f"{d.day}/{d.month}", "count": counts[d], "height": round(counts[d] / peak * 100)} for d in series]
 
 
+def _award_titles(users: list[User], players: list[PlayerStats]) -> list[dict]:
+    """Fun titles; every title has one holder and ties go to the better ranked player."""
+    titles: list[dict] = []
+
+    def award(icon: str, title: str, joke: str, candidates, key, detail) -> None:
+        pool = [p for p in candidates if key(p) > 0]
+        if not pool:
+            return
+        holder = max(pool, key=lambda p: (key(p), -p.user.rank))
+        titles.append({"icon": icon, "title": title, "joke": joke, "name": holder.user.name, "detail": detail(holder)})
+
+    if users:
+        titles.append({"icon": "👑", "title": "De Kroonprins", "joke": "Staat bovenaan en weet het.", "name": users[0].name, "detail": "rang 1"})
+    if len(users) > 1:
+        titles.append({"icon": "🥈", "title": "Eeuwige tweede", "joke": "Dichterbij dan ooit, maar net niet.", "name": users[1].name, "detail": "rang 2"})
+    award("🔥", "Onverslaanbaar", "Niemand kan hem of haar nog stoppen.", players, lambda p: p.current_streak if p.current_streak >= 2 else 0, lambda p: f"{p.current_streak} wins op rij")
+    award("🏳️", "Forfeit-koning", "Als opgeven een sport was.", players, lambda p: p.forfeits, lambda p: f"{p.forfeits}x opgegeven of niet komen opdagen")
+    award("🤕", "Pechvogel", "De ladder zit even tegen.", players, lambda p: p.loss_streak if p.loss_streak >= 2 else 0, lambda p: f"{p.loss_streak} verliespartijen op rij")
+    award("🧗", "Klimaap", "Altijd omhoog, nooit tevreden.", players, lambda p: p.climbed, lambda p: f"{p.climbed} plaatsen gestegen")
+    award("🎮", "Gamer van het kantoor", "Heeft duidelijk geen deadlines.", players, lambda p: p.wins + p.losses if p.wins + p.losses >= 2 else 0, lambda p: f"{p.wins + p.losses} partijen gespeeld")
+    return titles
+
+
 def build_scoreboard(db: Session, *, limit: int = 5) -> Scoreboard:
     users = list(db.scalars(select(User).where(User.is_active).order_by(User.rank)))
     stats = {user.id: PlayerStats(user=user) for user in users}
@@ -81,6 +108,9 @@ def build_scoreboard(db: Session, *, limit: int = 5) -> Scoreboard:
             )
         # Forfeits move ranks but are not real games, so they don't count for wins or streaks.
         if challenge.status is not ChallengeStatus.COMPLETED:
+            forfeiter_id = challenge.challenged_id if winner_id == challenge.challenger_id else challenge.challenger_id
+            if forfeiter_id in stats:
+                stats[forfeiter_id].forfeits += 1
             continue
         loser_id = challenge.challenged_id if winner_id == challenge.challenger_id else challenge.challenger_id
         if winner_id in stats:
@@ -88,9 +118,13 @@ def build_scoreboard(db: Session, *, limit: int = 5) -> Scoreboard:
             winner.wins += 1
             winner.current_streak += 1
             winner.best_streak = max(winner.best_streak, winner.current_streak)
+            winner.loss_streak = 0
         if loser_id in stats:
-            stats[loser_id].losses += 1
-            stats[loser_id].current_streak = 0
+            loser = stats[loser_id]
+            loser.losses += 1
+            loser.current_streak = 0
+            loser.loss_streak += 1
+            loser.worst_loss_streak = max(loser.worst_loss_streak, loser.loss_streak)
 
     players = list(stats.values())
     played = [c for c in finished if c.status is ChallengeStatus.COMPLETED]
@@ -109,5 +143,6 @@ def build_scoreboard(db: Session, *, limit: int = 5) -> Scoreboard:
         best_streak=max((p.current_streak for p in players), default=0),
         games=_game_segments(played),
         daily=_daily_activity(played),
+        titles=_award_titles(users, players),
         cheaters=list(db.scalars(select(CheaterClick).order_by(CheaterClick.first_clicked_at))),
     )

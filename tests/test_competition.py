@@ -235,3 +235,19 @@ def test_scoreboard_lists_cheaters(db):
     db.commit()
     board = build_scoreboard(db)
     assert [c.user.name for c in board.cheaters] == ["Amber"] and board.cheaters[0].clicks == 2
+
+
+def test_scoreboard_awards_titles(db):
+    from app.services.scoreboard import build_scoreboard
+
+    (amber, john, noor), game = add_players(db)
+    challenge = create_challenge(db, challenger_id=john.id, challenged_id=amber.id, now=NOW)
+    choose_game(db, challenge_id=challenge.id, chooser_id=amber.id, game_id=game.id)
+    submit_result(db, challenge_id=challenge.id, submitter_id=john.id, winner_id=john.id)
+    confirm_result(db, challenge_id=challenge.id, confirmer_id=amber.id, now=NOW)
+    forfeit = create_challenge(db, challenger_id=noor.id, challenged_id=amber.id, now=NOW)
+    forfeit_challenge(db, challenge_id=forfeit.id, user_id=amber.id, now=NOW)
+    titles = {t["title"]: t["name"] for t in build_scoreboard(db).titles}
+    assert titles["Forfeit-koning"] == "Amber"
+    assert titles["Klimaap"] in ("John", "Noor")
+    assert "Onverslaanbaar" not in titles
