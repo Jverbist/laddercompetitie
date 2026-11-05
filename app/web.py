@@ -468,8 +468,11 @@ def finale_page(request: Request):
         matches = tournament.matches if tournament else []
         rounds = [(number, name, [m for m in matches if m.round == number]) for number, name in ROUND_NAMES.items()]
         choices = {m.id: available_games(db, m) for m in matches if m.status == "active" and m.game_id is None}
+        top_eight = list(db.scalars(select(User).where(User.is_active, User.is_blocked.is_(False), User.rank > 0).order_by(User.rank).limit(10)))
+        wins = dict(db.execute(select(Challenge.confirmed_winner_id, func.count()).where(
+            Challenge.status.in_((ChallengeStatus.COMPLETED, ChallengeStatus.FORFEIT))).group_by(Challenge.confirmed_winner_id)).all())
         return templates.TemplateResponse(request, "finale.html", {
-            "user": user, "tournament": tournament, "rounds": rounds, "choices": choices,
+            "user": user, "top_eight": top_eight, "wins": wins, "tournament": tournament, "rounds": rounds, "choices": choices,
             "message": request.query_params.get("success"), "error": request.query_params.get("error"),
             "start_label": settings.finale_bracket_start.strftime("%H:%M"),
             "window_start": settings.finale_qualification_start.strftime("%H:%M"),
