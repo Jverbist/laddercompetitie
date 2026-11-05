@@ -81,3 +81,51 @@ class CheaterClick(Base):
     first_clicked_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
     user: Mapped[User] = relationship()
+
+
+class Tournament(Base):
+    __tablename__ = "tournaments"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    started_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    champion_id: Mapped[int | None] = mapped_column(ForeignKey("users.id"), nullable=True)
+    finished_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+    champion: Mapped[User | None] = relationship()
+    matches: Mapped[list["TournamentMatch"]] = relationship(
+        back_populates="tournament", order_by="TournamentMatch.round, TournamentMatch.slot"
+    )
+
+
+class TournamentMatch(Base):
+    __tablename__ = "tournament_matches"
+    __table_args__ = (
+        UniqueConstraint("tournament_id", "round", "slot"),
+        UniqueConstraint("tournament_id", "round", "game_id"),
+    )
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    tournament_id: Mapped[int] = mapped_column(ForeignKey("tournaments.id"), index=True)
+    round: Mapped[int] = mapped_column(Integer)
+    slot: Mapped[int] = mapped_column(Integer)
+    player_a_id: Mapped[int | None] = mapped_column(ForeignKey("users.id"), nullable=True)
+    player_b_id: Mapped[int | None] = mapped_column(ForeignKey("users.id"), nullable=True)
+    seed_a: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    seed_b: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    game_id: Mapped[int | None] = mapped_column(ForeignKey("games.id"), nullable=True)
+    status: Mapped[str] = mapped_column(String(20), default="pending")
+    proposed_winner_id: Mapped[int | None] = mapped_column(ForeignKey("users.id"), nullable=True)
+    winner_id: Mapped[int | None] = mapped_column(ForeignKey("users.id"), nullable=True)
+
+    tournament: Mapped[Tournament] = relationship(back_populates="matches")
+    player_a: Mapped[User | None] = relationship(foreign_keys=[player_a_id])
+    player_b: Mapped[User | None] = relationship(foreign_keys=[player_b_id])
+    winner: Mapped[User | None] = relationship(foreign_keys=[winner_id])
+    game: Mapped[Game | None] = relationship()
+
+    @property
+    def chooser_id(self) -> int | None:
+        """The higher seed (lowest number) picks the game."""
+        if self.player_a_id is None or self.player_b_id is None:
+            return None
+        return self.player_a_id if self.seed_a <= self.seed_b else self.player_b_id

@@ -2,14 +2,20 @@ import random
 from datetime import datetime, timedelta
 
 from fastapi import HTTPException, status
-from sqlalchemy import Select, delete, func, or_, select
+from sqlalchemy import Select, delete, func, or_, select, update
 from sqlalchemy.orm import Session
 
 from app.core.security import hash_password
 from app.services.worktime import add_working_time
-from app.models import Challenge, ChallengeStatus, Game, User, UserRole
+from app.core.config import settings
+from app.models import Challenge, ChallengeStatus, Game, TournamentMatch, Tournament, User, UserRole
 
 CHALLENGE_DURATION = timedelta(days=2)
+FINALE_CHALLENGE_DURATION = timedelta(minutes=15)
+
+
+def challenge_duration(now: datetime) -> timedelta:
+    return FINALE_CHALLENGE_DURATION if settings.in_finale_qualification(now) else CHALLENGE_DURATION
 OPEN_CHALLENGE_STATUSES = (ChallengeStatus.ACTIVE, ChallengeStatus.RESULT_PENDING)
 FINISHED_CHALLENGE_STATUSES = (ChallengeStatus.COMPLETED, ChallengeStatus.FORFEIT)
 REMATCH_COOLDOWN_TURNS = 2
@@ -70,6 +76,8 @@ def cooldown_opponent_ids(db: Session, user_id: int) -> set[int]:
 def create_challenge(db: Session, *, challenger_id: int, challenged_id: int, now: datetime) -> Challenge:
     if challenger_id == challenged_id:
         raise HTTPException(status_code=422, detail="You cannot challenge yourself.")
+    if now >= settings.finale_qualification_end:
+        raise HTTPException(status_code=409, detail="De kwalificatie voor de finale is afgelopen.")
 
     challenger = db.scalar(select(User).where(User.id == challenger_id).with_for_update())
     challenged = db.scalar(select(User).where(User.id == challenged_id).with_for_update())
@@ -98,7 +106,7 @@ def create_challenge(db: Session, *, challenger_id: int, challenged_id: int, now
         challenged_id=challenged.id,
         challenger_rank_at_creation=challenger.rank,
         challenged_rank_at_creation=challenged.rank,
-        deadline_at=add_working_time(now, CHALLENGE_DURATION),
+        deadline_at=add_working_time(now, challenge_duration(now)),
     )
     db.add(challenge)
     db.flush()
@@ -194,16 +202,23 @@ def admin_resolve_challenge(
 
 
 def expire_overdue_challenges(db: Session, *, now: datetime) -> list[Challenge]:
-    overdue = list(
-        db.scalars(
-            select(Challenge)
-            .where(Challenge.status.in_(OPEN_CHALLENGE_STATUSES), Challenge.deadline_at <= now)
-            .with_for_update()
-        )
-    )
-    for challenge in overdue:
+    overdue_ids = db.scalars(
+        select(Challenge.id).where(Challenge.status.in_(OPEN_CHALLENGE_STATUSES), Challenge.deadline_at <= now)
+    ).all()
+    expired = []
+    for challenge_id in overdue_ids:
+        # Claim atomically so two workers never swap the same ranks twice.
+        claimed = db.execute(
+            update(Challenge)
+            .where(Challenge.id == challenge_id, Challenge.status.in_(OPEN_CHALLENGE_STATUSES))
+            .values(status=ChallengeStatus.FORFEIT)
+        ).rowcount
+        if not claimed:
+            continue
+        challenge = db.get(Challenge, challenge_id, populate_existing=True)
         _complete_challenge(db, challenge, challenge.challenger_id, ChallengeStatus.FORFEIT, now)
-    return overdue
+        expired.append(challenge)
+    return expired
 
 
 def _complete_challenge(
@@ -259,6 +274,8 @@ def remove_participant(db: Session, *, user_id: int, now: datetime) -> User:
 def reset_competition(db: Session, *, rng: random.Random | None = None) -> tuple[int, int]:
     """Remove all challenges, unblock/reactivate everyone and place them at a random rank."""
     rng = rng or random.SystemRandom()
+    db.execute(delete(TournamentMatch))
+    db.execute(delete(Tournament))
     removed = db.execute(delete(Challenge)).rowcount
     users = list(db.scalars(select(User).order_by(User.id).with_for_update()))
     # Rank is unique, so move everyone out of the way before assigning the new order.

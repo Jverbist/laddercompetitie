@@ -19,7 +19,9 @@ class Settings(BaseSettings):
     registration_start: datetime = datetime.fromisoformat("2026-10-16T00:00:00+02:00")
     competition_start: datetime = datetime.fromisoformat("2026-10-19T00:00:00+02:00")
     qualification_deadline: datetime = datetime.fromisoformat("2026-11-13T23:59:59+01:00")
-    final_day_start: datetime = datetime.fromisoformat("2026-10-16T09:00:00+02:00")
+    finale_qualification_start: datetime = datetime.fromisoformat("2026-11-13T13:30:00+01:00")
+    finale_qualification_end: datetime = datetime.fromisoformat("2026-11-13T16:30:00+01:00")
+    finale_bracket_start: datetime = datetime.fromisoformat("2026-11-13T17:00:00+01:00")
 
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
@@ -28,6 +30,9 @@ class Settings(BaseSettings):
 
     def competition_running(self, now: datetime) -> bool:
         return self.competition_start <= now <= self.qualification_deadline
+
+    def in_finale_qualification(self, now: datetime) -> bool:
+        return self.finale_qualification_start <= now < self.finale_qualification_end
 
     @property
     def admin_email_set(self) -> set[str]:
