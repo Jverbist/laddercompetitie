@@ -83,3 +83,9 @@ def test_finale_challenge_duration_and_cutoff(db):
     assert challenge.deadline_at == inside + timedelta(minutes=15)
     with pytest.raises(HTTPException):
         create_challenge(db, challenger_id=users[3].id, challenged_id=users[2].id, now=settings.finale_qualification_end)
+
+
+def test_finale_announcement_window():
+    assert not settings.finale_announcement_active(settings.finale_announce_start - timedelta(seconds=1))
+    assert settings.finale_announcement_active(settings.finale_announce_start)
+    assert not settings.finale_announcement_active(settings.finale_bracket_start)

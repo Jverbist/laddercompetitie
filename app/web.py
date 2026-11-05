@@ -117,7 +117,7 @@ def _dashboard_data(db, user: User, error: str | None = None) -> dict:
         "wins": sum(item.confirmed_winner_id == user.id for item in complete),
         "played": len(complete), "qualification_time": _time_left(settings.qualification_deadline), "end_label": _date_label(settings.qualification_deadline),
         "time_left": {item.id: _time_left(item.deadline_at, working=True) for item in active}, "error": error,
-        "finale_active": tournament is not None, "my_match": my_match,
+        "finale_active": tournament is not None, "finale_announcement": settings.finale_announcement_active(_now()), "finale_day_label": _date_label(settings.finale_bracket_start), "my_match": my_match,
         "finale_window": settings.in_finale_qualification(_now()), "finale_start_label": settings.finale_bracket_start.strftime("%H:%M"),
         "finale_end_label": settings.finale_qualification_end.strftime("%H:%M"),
     }
