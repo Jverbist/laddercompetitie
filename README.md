@@ -281,7 +281,7 @@ Er zijn twee routes. `TEAMS_WEBHOOK_URL` is een flow met de trigger *When an HTT
 2. Plan `process-deadlines` elke minuut via een worker, bijvoorbeeld Celery + Redis of een platform scheduler. Voeg daarin ook de 24-uursreminder toe.
 3. Voeg Alembic-migraties toe vóór de eerste gedeelde of productieomgeving; `create_all` is geschikt voor de lokale start.
 4. Bouw een responsive frontend tegen deze API voor dashboard, ranking, uitdagingen en administratie.
-5. Finale (13 november): van 13:30 tot 16:30 gelden de normale ladderregels met 15 minuten per uitdaging. Daarna wordt de top 8 een knock-out (1-8, 4-5, 2-7, 3-6) op `/finale`. De hoogste seed kiest het spel; een spel dat in een ronde gekozen is, is voor de rest van die ronde geblokkeerd en een kiezer mag niet twee rondes hetzelfde spel kiezen. Start via de knop onder Beheer (typ START) of automatisch om 17:00 (`FINALE_BRACKET_START`, `FINALE_QUALIFICATION_START/END` in `.env`). Admins kunnen per wedstrijd een winnaar of spel instellen.
+5. Finale (13 november): van 13:30 tot 16:30 gelden de normale ladderregels met 15 minuten per uitdaging, maar enkel voor de top 10 (`FINALE_LADDER_SIZE`); wie daarbuiten staat kan die dag niet uitdagen of uitgedaagd worden. Daarna wordt de top 8 een knock-out (1-8, 4-5, 2-7, 3-6) op `/finale`. De hoogste seed kiest het spel; een spel dat in een ronde gekozen is, is voor de rest van die ronde geblokkeerd en een kiezer mag niet twee rondes hetzelfde spel kiezen. Start via de knop onder Beheer (typ START) of automatisch om 17:00 (`FINALE_BRACKET_START`, `FINALE_QUALIFICATION_START/END` in `.env`). Admins kunnen per wedstrijd een winnaar of spel instellen.
 
 ## Weekendpauze
 

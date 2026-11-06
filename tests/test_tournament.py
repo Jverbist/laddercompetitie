@@ -89,3 +89,13 @@ def test_finale_announcement_window():
     assert not settings.finale_announcement_active(settings.finale_announce_start - timedelta(seconds=1))
     assert settings.finale_announcement_active(settings.finale_announce_start)
     assert not settings.finale_announcement_active(settings.finale_bracket_start)
+
+
+def test_finale_day_only_top_ten_can_play(db):
+    users, _ = setup_finale(db, players=12)
+    inside = settings.finale_qualification_start + timedelta(minutes=5)
+    with pytest.raises(HTTPException):
+        create_challenge(db, challenger_id=users[10].id, challenged_id=users[8].id, now=inside)
+    with pytest.raises(HTTPException):
+        create_challenge(db, challenger_id=users[10].id, challenged_id=users[9].id, now=inside)
+    create_challenge(db, challenger_id=users[9].id, challenged_id=users[8].id, now=inside)

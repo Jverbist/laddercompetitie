@@ -20,6 +20,7 @@ class Settings(BaseSettings):
     competition_start: datetime = datetime.fromisoformat("2026-10-19T00:00:00+02:00")
     qualification_deadline: datetime = datetime.fromisoformat("2026-11-13T23:59:59+01:00")
     finale_announce_start: datetime = datetime.fromisoformat("2026-11-09T00:00:00+01:00")
+    finale_ladder_size: int = 10
     finale_qualification_start: datetime = datetime.fromisoformat("2026-11-13T13:30:00+01:00")
     finale_qualification_end: datetime = datetime.fromisoformat("2026-11-13T16:30:00+01:00")
     finale_bracket_start: datetime = datetime.fromisoformat("2026-11-13T17:00:00+01:00")

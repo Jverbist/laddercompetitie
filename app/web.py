@@ -102,7 +102,9 @@ def _dashboard_data(db, user: User, error: str | None = None) -> dict:
     ).order_by(Challenge.created_at.desc()).limit(5)))
     complete = [item for item in history if item.status in (ChallengeStatus.COMPLETED, ChallengeStatus.FORFEIT)]
     blocked = cooldown_opponent_ids(db, user.id)
-    opponents = [candidate for candidate in ranking if user.rank - 5 <= candidate.rank < user.rank and candidate.id not in blocked and is_available(db, candidate)]
+    finale_now = settings.in_finale_qualification(_now())
+    finale_out = finale_now and user.rank > settings.finale_ladder_size
+    opponents = [] if finale_out else [candidate for candidate in ranking if user.rank - 5 <= candidate.rank < user.rank and (not finale_now or candidate.rank <= settings.finale_ladder_size) and candidate.id not in blocked and is_available(db, candidate)]
     games = list(db.scalars(select(Game).where(Game.is_active).order_by(Game.name)))
     played_per_game = dict(db.execute(
         select(Challenge.game_id, func.count()).where(
@@ -118,7 +120,7 @@ def _dashboard_data(db, user: User, error: str | None = None) -> dict:
         "played": len(complete), "qualification_time": _time_left(settings.qualification_deadline), "end_label": _date_label(settings.qualification_deadline),
         "time_left": {item.id: _time_left(item.deadline_at, working=True) for item in active}, "error": error,
         "finale_active": tournament is not None, "finale_announcement": settings.finale_announcement_active(_now()), "finale_day_label": _date_label(settings.finale_bracket_start), "my_match": my_match,
-        "finale_window": settings.in_finale_qualification(_now()), "finale_start_label": settings.finale_bracket_start.strftime("%H:%M"),
+        "finale_window": finale_now, "finale_out": finale_out, "finale_ladder_size": settings.finale_ladder_size, "finale_start_label": settings.finale_bracket_start.strftime("%H:%M"),
         "finale_end_label": settings.finale_qualification_end.strftime("%H:%M"),
     }
 

@@ -88,6 +88,12 @@ def create_challenge(db: Session, *, challenger_id: int, challenged_id: int, now
     if not is_available(db, challenged):
         raise HTTPException(status_code=409, detail="This participant is already unavailable.")
 
+    if settings.in_finale_qualification(now) and max(challenger.rank, challenged.rank) > settings.finale_ladder_size:
+        raise HTTPException(
+            status_code=409,
+            detail=f"Op finaledag spelen enkel de top {settings.finale_ladder_size} nog mee.",
+        )
+
     rank_distance = challenger.rank - challenged.rank
     if not 1 <= rank_distance <= 5:
         raise HTTPException(
