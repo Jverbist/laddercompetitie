@@ -41,7 +41,7 @@ from app.services.tournament import (
     submit_tournament_result,
     try_auto_start,
 )
-from app.services.worktime import is_paused, working_seconds_between
+from app.services.worktime import paused_until, working_seconds_between
 from app.services.scoreboard import build_scoreboard
 from app.services.notifications import send_challenge_notification
 
@@ -74,7 +74,8 @@ def _time_left(deadline: datetime, *, working: bool = False) -> str:
     days, seconds = divmod(seconds, 86_400)
     hours, seconds = divmod(seconds, 3_600)
     label = f"{days}d {hours}u {seconds // 60}m"
-    return f"{label} (gepauzeerd tot maandag 08:00)" if working and is_paused(now) else label
+    pause_end = paused_until(now) if working else None
+    return f"{label} (gepauzeerd tot {pause_end:%d/%m %H:%M})" if pause_end else label
 
 
 _MONTHS = ("januari", "februari", "maart", "april", "mei", "juni", "juli", "augustus", "september", "oktober", "november", "december")

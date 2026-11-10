@@ -285,8 +285,8 @@ Er zijn twee routes. `TEAMS_WEBHOOK_URL` is een flow met de trigger *When an HTT
 
 ## Weekendpauze
 
-De deadline van 48 uur loopt niet tijdens het weekend: de timer staat stil van vrijdag 18:00 tot maandag 08:00 (Brusselse tijd) en loopt daarna automatisch verder. De logica staat in `app/services/worktime.py`. Open uitdagingen van voor deze functie krijg je bij met:
+De deadline van 48 uur loopt niet tijdens het weekend: de timer staat stil van vrijdag 18:00 tot maandag 08:00 (Brusselse tijd). Ook op woensdag 11 november 2026 staat de timer stil, van 00:00 tot donderdag 00:00. De migratie `20261110_05` verlengt bestaande open deadlines automatisch en behoudt manuele verlengingen. De logica staat in `app/services/worktime.py`. Voor oudere installaties kun je deadlines herberekenen met onderstaand script; **dit overschrijft manuele verlengingen**:
 
 ```bash
-cd ~/laddercompetitie && .venv/bin/python scripts/recalculate_deadlines.py
+cd ~/laddercompetitie && PYTHONPATH=. .venv/bin/python scripts/recalculate_deadlines.py
 ```
