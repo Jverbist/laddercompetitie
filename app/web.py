@@ -30,17 +30,6 @@ from app.services.competition import (
     reset_competition,
     submit_result,
 )
-from app.services.tournament import (
-    ROUND_NAMES,
-    admin_set_winner,
-    available_games,
-    choose_tournament_game,
-    confirm_tournament_result,
-    get_tournament,
-    start_finale,
-    submit_tournament_result,
-    try_auto_start,
-)
 from app.services.worktime import paused_until, working_seconds_between
 from app.services.scoreboard import build_scoreboard
 from app.services.notifications import send_challenge_notification
@@ -88,11 +77,6 @@ def _date_label(value: datetime) -> str:
 def _dashboard_data(db, user: User, error: str | None = None) -> dict:
     if expire_overdue_challenges(db, now=_now()):
         db.commit()
-    try_auto_start(db, _now())
-    tournament = get_tournament(db)
-    my_match = None
-    if tournament is not None:
-        my_match = next((m for m in tournament.matches if m.status in ("active", "result_pending") and user.id in (m.player_a_id, m.player_b_id)), None)
     ranking = list(db.scalars(select(User).where(User.is_active).order_by(User.rank)))
     active = list(db.scalars(select(Challenge).where(
         Challenge.status.in_((ChallengeStatus.ACTIVE, ChallengeStatus.RESULT_PENDING)),
@@ -120,7 +104,7 @@ def _dashboard_data(db, user: User, error: str | None = None) -> dict:
         "wins": sum(item.confirmed_winner_id == user.id for item in complete),
         "played": len(complete), "qualification_time": _time_left(settings.qualification_deadline), "end_label": _date_label(settings.qualification_deadline),
         "time_left": {item.id: _time_left(item.deadline_at, working=True) for item in active}, "error": error,
-        "finale_active": tournament is not None, "finale_announcement": settings.finale_announcement_active(_now()), "finale_day_label": _date_label(settings.finale_bracket_start), "my_match": my_match,
+        "finale_announcement": settings.finale_announcement_active(_now()), "finale_day_label": _date_label(settings.finale_bracket_start),
         "finale_window": finale_now, "finale_out": finale_out, "finale_ladder_size": settings.finale_ladder_size, "finale_start_label": settings.finale_bracket_start.strftime("%H:%M"),
         "finale_end_label": settings.finale_qualification_end.strftime("%H:%M"),
     }
@@ -376,7 +360,7 @@ def admin_console(request: Request):
 
 
 def _admin_data(db, user: User, request: Request, **extra) -> dict:
-    return {"user": user, "users": list(db.scalars(select(User).order_by(User.is_active.desc(), User.rank))), "games": list(db.scalars(select(Game).order_by(Game.name))), "challenges": list(db.scalars(select(Challenge).order_by(Challenge.created_at.desc(), Challenge.id.desc()))), "winners": {u.id: u.name for u in db.scalars(select(User))}, "message": request.query_params.get("success"), "error": request.query_params.get("error"), "temp_password": None, "finale_started": get_tournament(db) is not None, "finale_start_label": settings.finale_bracket_start.strftime("%H:%M"), **extra}
+    return {"user": user, "users": list(db.scalars(select(User).order_by(User.is_active.desc(), User.rank))), "games": list(db.scalars(select(Game).order_by(Game.name))), "challenges": list(db.scalars(select(Challenge).order_by(Challenge.created_at.desc(), Challenge.id.desc()))), "winners": {u.id: u.name for u in db.scalars(select(User))}, "message": request.query_params.get("success"), "error": request.query_params.get("error"), "temp_password": None, **extra}
 
 
 @router.post("/admin/users/{user_id}/reset-password")
@@ -449,100 +433,21 @@ def reset_competition_page(request: Request, confirmation: str = Form()):
     return _redirect(f"/admin?success=Competitie+gereset:+{players}+spelers+willekeurig+geplaatst,+{removed}+uitdagingen+verwijderd")
 
 
-def _require_admin(request: Request, db) -> User | RedirectResponse:
-    user = _signed_in(request, db)
-    if isinstance(user, RedirectResponse):
-        return user
-    if user.role is not UserRole.ADMIN:
-        raise HTTPException(status_code=403, detail="Administrator permission required.")
-    return user
-
-
 @router.get("/finale")
 def finale_page(request: Request):
     with SessionLocal() as db:
         user = _signed_in(request, db)
         if isinstance(user, RedirectResponse):
             return user
-        expire_overdue_challenges(db, now=_now())
-        try_auto_start(db, _now())
-        db.commit()
-        tournament = get_tournament(db)
-        matches = tournament.matches if tournament else []
-        rounds = [(number, name, [m for m in matches if m.round == number]) for number, name in ROUND_NAMES.items()]
-        choices = {m.id: available_games(db, m) for m in matches if m.status == "active" and m.game_id is None}
-        top_eight = list(db.scalars(select(User).where(User.is_active, User.is_blocked.is_(False), User.rank > 0).order_by(User.rank).limit(10)))
+        if expire_overdue_challenges(db, now=_now()):
+            db.commit()
+        finalists = list(db.scalars(select(User).where(User.is_active, User.is_blocked.is_(False), User.rank > 0).order_by(User.rank).limit(10)))
         wins = dict(db.execute(select(Challenge.confirmed_winner_id, func.count()).where(
             Challenge.status.in_((ChallengeStatus.COMPLETED, ChallengeStatus.FORFEIT))).group_by(Challenge.confirmed_winner_id)).all())
         return templates.TemplateResponse(request, "finale.html", {
-            "user": user, "top_eight": top_eight, "wins": wins, "tournament": tournament, "rounds": rounds, "choices": choices,
-            "message": request.query_params.get("success"), "error": request.query_params.get("error"),
+            "user": user, "top_eight": finalists, "wins": wins,
             "start_label": settings.finale_bracket_start.strftime("%H:%M"),
             "window_start": settings.finale_qualification_start.strftime("%H:%M"),
             "window_end": settings.finale_qualification_end.strftime("%H:%M"),
             "day_label": _date_label(settings.finale_bracket_start),
         })
-
-
-def _finale_action(request: Request, action, success: str, *, admin: bool = False):
-    with SessionLocal() as db:
-        user = _require_admin(request, db) if admin else _signed_in(request, db)
-        if isinstance(user, RedirectResponse):
-            return user
-        try:
-            action(db, user)
-            db.commit()
-        except HTTPException as exception:
-            db.rollback()
-            return _redirect(f"/finale?error={quote(str(exception.detail))}")
-        except IntegrityError:
-            db.rollback()
-            return _redirect("/finale?error=" + quote("Dit spel is net door een andere wedstrijd gekozen."))
-    return _redirect(f"/finale?success={quote(success)}")
-
-
-@router.post("/finale/matches/{match_id}/game")
-def finale_choose_game(request: Request, match_id: int, game_id: int = Form()):
-    return _finale_action(request, lambda db, u: choose_tournament_game(db, match_id=match_id, user_id=u.id, game_id=game_id), "Spel gekozen")
-
-
-@router.post("/finale/matches/{match_id}/result")
-def finale_submit_result(request: Request, match_id: int, winner_id: int = Form()):
-    return _finale_action(request, lambda db, u: submit_tournament_result(db, match_id=match_id, user_id=u.id, winner_id=winner_id), "Resultaat ingevoerd, wacht op bevestiging")
-
-
-@router.post("/finale/matches/{match_id}/confirm")
-def finale_confirm_result(request: Request, match_id: int):
-    return _finale_action(request, lambda db, u: confirm_tournament_result(db, match_id=match_id, user_id=u.id, now=_now()), "Resultaat bevestigd")
-
-
-@router.post("/admin/finale/start")
-def admin_start_finale(request: Request, confirmation: str = Form()):
-    if confirmation.strip().upper() != "START":
-        return _redirect("/admin?error=Typ+START+om+te+bevestigen")
-    with SessionLocal() as db:
-        user = _require_admin(request, db)
-        if isinstance(user, RedirectResponse):
-            return user
-        try:
-            start_finale(db, now=_now())
-            db.commit()
-        except HTTPException as exception:
-            db.rollback()
-            return _redirect(f"/admin?error={quote(str(exception.detail))}")
-        except IntegrityError:
-            db.rollback()
-            return _redirect("/admin?error=De+finale+is+al+gestart")
-    return _redirect("/finale?success=Finale+gestart")
-
-
-@router.post("/admin/finale/matches/{match_id}")
-def admin_finale_match(request: Request, match_id: int, action: str = Form(), winner_id: int | None = Form(None), game_id: int | None = Form(None)):
-    def run(db, u):
-        if action == "winner" and winner_id:
-            admin_set_winner(db, match_id=match_id, winner_id=winner_id, now=_now())
-        elif action == "game" and game_id:
-            choose_tournament_game(db, match_id=match_id, user_id=u.id, game_id=game_id, is_admin=True)
-        else:
-            raise HTTPException(status_code=422, detail="Onbekende actie.")
-    return _finale_action(request, run, "Aangepast door admin", admin=True)

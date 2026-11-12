@@ -1,7 +1,4 @@
-import asyncio
-import logging
-from contextlib import asynccontextmanager, suppress
-from datetime import datetime
+from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
@@ -10,35 +7,16 @@ from starlette.middleware.trustedhost import TrustedHostMiddleware
 
 from app.api.routes import router
 from app.core.config import settings
-from app.db import Base, SessionLocal, engine
-from app.services.tournament import try_auto_start
+from app.db import Base, engine
 from app.web import router as web_router
 from app.feed import router as feed_router
-
-
-def _auto_start_finale() -> None:
-    with SessionLocal() as db:
-        try_auto_start(db, datetime.now(settings.qualification_deadline.tzinfo))
-
-
-async def _finale_auto_start_loop() -> None:
-    while True:
-        try:
-            await asyncio.to_thread(_auto_start_finale)
-        except Exception:
-            logging.getLogger(__name__).exception("Finale auto-start failed")
-        await asyncio.sleep(30)
 
 
 @asynccontextmanager
 async def lifespan(_: FastAPI):
     if settings.auto_create_schema:
         Base.metadata.create_all(bind=engine)
-    task = asyncio.create_task(_finale_auto_start_loop())
     yield
-    task.cancel()
-    with suppress(asyncio.CancelledError):
-        await task
 
 
 app = FastAPI(
