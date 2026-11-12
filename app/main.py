@@ -1,4 +1,7 @@
-from contextlib import asynccontextmanager
+import asyncio
+import logging
+from contextlib import asynccontextmanager, suppress
+from datetime import datetime
 
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
@@ -7,16 +10,36 @@ from starlette.middleware.trustedhost import TrustedHostMiddleware
 
 from app.api.routes import router
 from app.core.config import settings
-from app.db import Base, engine
+from app.db import Base, SessionLocal, engine
+from app.services.competition import expire_overdue_challenges
 from app.web import router as web_router
 from app.feed import router as feed_router
+
+
+def _close_finished_challenges() -> None:
+    with SessionLocal() as db:
+        expire_overdue_challenges(db, now=datetime.now(settings.qualification_deadline.tzinfo))
+        db.commit()
+
+
+async def _challenge_cleanup_loop() -> None:
+    while True:
+        try:
+            await asyncio.to_thread(_close_finished_challenges)
+        except Exception:
+            logging.getLogger(__name__).exception("Challenge cleanup failed")
+        await asyncio.sleep(30)
 
 
 @asynccontextmanager
 async def lifespan(_: FastAPI):
     if settings.auto_create_schema:
         Base.metadata.create_all(bind=engine)
+    task = asyncio.create_task(_challenge_cleanup_loop())
     yield
+    task.cancel()
+    with suppress(asyncio.CancelledError):
+        await task
 
 
 app = FastAPI(

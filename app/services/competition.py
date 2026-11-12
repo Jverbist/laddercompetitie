@@ -160,6 +160,8 @@ def confirm_result(
     challenge = db.scalar(select(Challenge).where(Challenge.id == challenge_id).with_for_update())
     if challenge is None:
         raise _not_found("Challenge")
+    if now >= settings.finale_qualification_end:
+        raise HTTPException(status_code=409, detail="De kwalificatie voor de finale is afgelopen.")
     if challenge.status is not ChallengeStatus.RESULT_PENDING:
         raise HTTPException(status_code=409, detail="There is no pending result to confirm.")
     if confirmer_id not in (challenge.challenger_id, challenge.challenged_id):
@@ -207,7 +209,22 @@ def admin_resolve_challenge(
     return challenge
 
 
+def cancel_open_challenges_after_cutoff(db: Session, *, now: datetime) -> int:
+    """At the end of finale qualification every open challenge is cancelled without rank changes."""
+    if now < settings.finale_qualification_end:
+        return 0
+    cancelled = db.execute(
+        update(Challenge)
+        .where(Challenge.status.in_(OPEN_CHALLENGE_STATUSES))
+        .values(status=ChallengeStatus.CANCELLED, completed_at=now)
+    ).rowcount
+    db.flush()
+    return cancelled
+
+
 def expire_overdue_challenges(db: Session, *, now: datetime) -> list[Challenge]:
+    if cancel_open_challenges_after_cutoff(db, now=now):
+        return []
     overdue_ids = db.scalars(
         select(Challenge.id).where(Challenge.status.in_(OPEN_CHALLENGE_STATUSES), Challenge.deadline_at <= now)
     ).all()

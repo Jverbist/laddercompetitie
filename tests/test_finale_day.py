@@ -41,3 +41,21 @@ def test_finale_day_only_top_ten_can_play(db):
     with pytest.raises(HTTPException):
         create_challenge(db, challenger_id=users[10].id, challenged_id=users[9].id, now=inside)
     create_challenge(db, challenger_id=users[9].id, challenged_id=users[8].id, now=inside)
+
+
+def test_open_challenges_cancelled_at_cutoff_without_rank_change(db):
+    from app.models import ChallengeStatus
+    from app.services.competition import confirm_result, expire_overdue_challenges, submit_result
+
+    users, _ = setup_finale(db)
+    inside = settings.finale_qualification_end - timedelta(minutes=10)
+    challenge = create_challenge(db, challenger_id=users[1].id, challenged_id=users[0].id, now=inside)
+    challenge.game_id = 1
+    submit_result(db, challenge_id=challenge.id, submitter_id=users[1].id, winner_id=users[1].id)
+    with pytest.raises(HTTPException):
+        confirm_result(db, challenge_id=challenge.id, confirmer_id=users[0].id, now=settings.finale_qualification_end)
+    expire_overdue_challenges(db, now=settings.finale_qualification_end)
+    db.commit()
+    db.refresh(challenge)
+    assert challenge.status is ChallengeStatus.CANCELLED
+    assert (users[0].rank, users[1].rank) == (1, 2)
