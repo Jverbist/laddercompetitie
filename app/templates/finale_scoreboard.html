@@ -1,0 +1,29 @@
+{% extends "base.html" %}{% block title %}Finale scoreboard{% endblock %}{% block body %}
+<header class="header"><a class="brand" href="/"><img class="logo" src="/static/exn-logo-white.svg" alt="Exclusive Networks"><span>Laddercompetitie</span></a><nav class="nav"><a class="button alt" href="/finale/scoreboard">Opnieuw bekijken</a><a class="button alt" href="/">Home</a></nav></header>
+<main class="finale-results">
+  <div class="finale-results-intro">
+    <p class="eyebrow">Exclusive Networks · Laddercompetitie 2026</p>
+    <h1>De finale<span>uitslag</span></h1>
+    <p>Drie finalisten. Eén kampioen.</p>
+  </div>
+  <ol class="finale-reveals" aria-label="Einduitslag finale">
+    <li class="finale-reveal finale-reveal-third">
+      <span class="finale-medal">03</span>
+      <div><p>Derde plaats</p><h2>Cédric</h2></div>
+      <span class="finale-medal-icon" aria-hidden="true">🥉</span>
+    </li>
+    <li class="finale-reveal finale-reveal-second">
+      <span class="finale-medal">02</span>
+      <div><p>Tweede plaats</p><h2>Joeri</h2></div>
+      <span class="finale-medal-icon" aria-hidden="true">🥈</span>
+    </li>
+    <li class="finale-reveal finale-reveal-first">
+      <span class="finale-medal">01</span>
+      <div><p>De kampioen</p><h2>William</h2></div>
+      <span class="finale-medal-icon" aria-hidden="true">🏆</span>
+    </li>
+  </ol>
+  <p class="finale-results-outro">Proficiat aan alle finalisten!</p>
+  <a class="button alt finale-replay" href="/finale/scoreboard">Bekijk de onthulling opnieuw</a>
+</main>
+{% endblock %}

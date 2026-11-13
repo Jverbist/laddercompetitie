@@ -26,3 +26,23 @@ body::before{content:none}.ambient-scene{position:fixed;inset:0;z-index:0;overfl
 .finale-banner{border-color:var(--gold);background:#ff993322;box-shadow:0 0 18px #ff993366}.finale-banner a{color:var(--gold);font-weight:800}.bracket{display:grid;grid-template-columns:repeat(3,1fr);gap:1.25rem;align-items:start}.bracket-round{display:grid;gap:1rem}.bracket-round h2{margin:0}.bracket-match.active{border-color:var(--gold)}.bracket-match.completed{opacity:.85}.finale-champion{margin-bottom:1.25rem;text-align:center;border-color:var(--gold);box-shadow:0 0 30px #ff993380}@media(max-width:780px){.bracket{grid-template-columns:1fr}}
 .finale-modal{position:fixed;inset:0;z-index:20;display:grid;place-items:center;padding:1rem;background:#030221cc;backdrop-filter:blur(4px)}.finale-modal[hidden]{display:none}.finale-modal-card{position:relative;max-width:30rem;padding:1.6rem;border-radius:1rem;background:linear-gradient(145deg,#1a1d63,#0b0b3a);border:1px solid var(--gold);box-shadow:0 0 40px #ff993399}.finale-modal-card h2{margin:.2rem 0 .8rem}.finale-modal-close{position:absolute;top:.6rem;right:.8rem;background:none;border:0;color:var(--muted);font-size:1.5rem;cursor:pointer}.finale-teasers{padding-left:1.1rem;color:var(--muted)}
 .finale-border{position:fixed;inset:0;z-index:100;pointer-events:none;background:radial-gradient(circle 150px at top left,#ff993366,transparent),radial-gradient(circle 150px at top right,#ff993366,transparent),radial-gradient(circle 150px at bottom left,#ff993366,transparent),radial-gradient(circle 150px at bottom right,#ff993366,transparent);animation:finale-corner-glow 3s ease-in-out infinite alternate}.finale-border[hidden]{display:none}@keyframes finale-corner-glow{from{opacity:.55}to{opacity:1}}@media(prefers-reduced-motion:reduce){.finale-border{animation:none}}
+
+.finale-results{position:relative;max-width:760px;margin:0 auto;padding:3rem 1rem 5rem;text-align:center}
+.finale-results-intro h1{font-size:clamp(3rem,10vw,6rem);line-height:.95;letter-spacing:-.06em;margin:.4rem 0 1rem;text-transform:uppercase}
+.finale-results-intro h1 span{display:block;color:var(--gold);text-shadow:0 0 35px #ff993377}
+.finale-results-intro>p:last-child{color:var(--muted);font-size:1.1rem}
+.finale-reveals{list-style:none;padding:0;margin:3rem 0 0;display:grid;gap:1rem}
+.finale-reveal{position:relative;display:flex;align-items:center;gap:1rem;text-align:left;padding:1.2rem 1.5rem;border:1px solid #ffffff33;border-radius:1rem;background:linear-gradient(110deg,#161846,#0b0b3a);box-shadow:0 15px 40px #0006;animation:finale-reveal 1s cubic-bezier(.16,1,.3,1) both}
+.finale-reveal-third{animation-delay:1s;border-color:#bb8355}
+.finale-reveal-second{animation-delay:4s;border-color:#c0ccdb}
+.finale-reveal-first{animation-delay:7s;border-color:var(--gold);background:linear-gradient(110deg,#603619,#1b1745);box-shadow:0 0 45px #ff993377,0 15px 40px #0006}
+.finale-medal{font-size:clamp(2rem,7vw,3.8rem);font-weight:900;color:#ffffff55;line-height:1}
+.finale-reveal-first .finale-medal{color:var(--gold)}
+.finale-reveal p{margin:0;color:var(--muted);font-size:.75rem;letter-spacing:.15em;text-transform:uppercase;font-weight:800}
+.finale-reveal-first p{color:#ffd39e}
+.finale-reveal h2{margin:.25rem 0 0;font-size:clamp(1.7rem,5vw,3rem);line-height:1}
+.finale-medal-icon{margin-left:auto;font-size:clamp(2rem,6vw,3.5rem)}
+.finale-results-outro,.finale-replay{animation:finale-reveal .8s ease both;animation-delay:8s}
+.finale-results-outro{margin:2rem 0 1rem;color:var(--muted)}
+@keyframes finale-reveal{from{opacity:0;transform:translateY(25px) scale(.96);filter:blur(8px)}to{opacity:1;transform:none;filter:blur(0)}}
+@media(prefers-reduced-motion:reduce){.finale-reveal,.finale-results-outro,.finale-replay{animation:none}}

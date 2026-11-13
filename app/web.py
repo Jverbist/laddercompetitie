@@ -438,6 +438,13 @@ def reset_competition_page(request: Request, confirmation: str = Form()):
     return _redirect(f"/admin?success=Competitie+gereset:+{players}+spelers+willekeurig+geplaatst,+{removed}+uitdagingen+verwijderd")
 
 
+@router.get("/finale/scoreboard")
+def finale_scoreboard(request: Request):
+    response = templates.TemplateResponse(request, "finale_scoreboard.html", {})
+    response.headers["Cache-Control"] = "no-store"
+    return response
+
+
 @router.get("/finale")
 def finale_page(request: Request):
     with SessionLocal() as db:

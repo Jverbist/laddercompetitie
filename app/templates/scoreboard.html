@@ -1,7 +1,7 @@
 {% extends "base.html" %}{% block title %}Scoreboard{% endblock %}{% block body %}
 <header class="header"><a class="brand" href="/dashboard"><img class="logo" src="/static/exn-logo-white.svg" alt="Exclusive Networks"><span>Laddercompetitie</span></a><nav class="nav"><a href="/dashboard">Dashboard</a><a class="button alt" href="/finale">Finale</a><a class="button alt" href="/uitleg">Uitleg</a><a class="button alt" href="/regels">Spelregels</a>{% if user.role.value=="admin" %}<a href="/admin">Beheer</a>{% endif %}<form method="post" action="/logout"><button class="button ghost">Afmelden</button></form></nav></header>
 <main class="page cyber">
-<section class="cyber-head"><div><p class="eyebrow"><span class="live-dot"></span> Live scoreboard</p><h1>Threat <em>Leaderboard</em></h1><p class="muted">Wie domineert de ladder? Alleen gespeelde partijen tellen mee voor wins en reeksen. Forfeits tellen niet.</p></div></section>
+<section class="cyber-head"><div><p class="eyebrow"><span class="live-dot"></span> Live scoreboard</p><h1>Threat <em>Leaderboard</em></h1><p class="muted">Wie domineert de ladder? Alleen gespeelde partijen tellen mee voor wins en reeksen. Forfeits tellen niet.</p><a class="button" href="/finale/scoreboard">Bekijk de finale-uitslag</a></div></section>
 <section class="kpis">
 <article class="card kpi"><span class="kpi-label">Partijen gespeeld</span><strong data-count="{{board.played}}">{{board.played}}</strong><i class="kpi-line"></i></article>
 <article class="card kpi"><span class="kpi-label">Actieve spelers</span><strong data-count="{{board.players}}">{{board.players}}</strong><i class="kpi-line"></i></article>

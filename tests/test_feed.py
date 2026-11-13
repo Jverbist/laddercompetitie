@@ -38,6 +38,14 @@ def test_scoreboard_requires_login():
     assert response.status_code in (302, 303, 401)
 
 
+def test_finale_scoreboard_is_public_and_reveals_results_in_order():
+    response = TestClient(app).get("/finale/scoreboard")
+    assert response.status_code == 200
+    assert response.headers["cache-control"] == "no-store"
+    assert response.text.index("Cédric") < response.text.index("Joeri") < response.text.index("William")
+    assert 'href="/finale/scoreboard">Bekijk de onthulling opnieuw' in response.text
+
+
 def test_admin_password_reset_requires_login():
     response = TestClient(app).post("/admin/users/1/reset-password", follow_redirects=False)
     assert response.status_code in (302, 303, 401)
