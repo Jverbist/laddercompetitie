@@ -35,6 +35,11 @@ from app.services.scoreboard import build_scoreboard
 from app.services.notifications import send_challenge_notification
 
 templates = Jinja2Templates(directory=str(Path(__file__).parent / "templates"))
+templates.env.globals.update(
+    finale_qualification_start=lambda: settings.finale_qualification_start.isoformat(),
+    finale_qualification_end=lambda: settings.finale_qualification_end.isoformat(),
+    server_time=lambda: datetime.now(settings.finale_qualification_start.tzinfo).isoformat(),
+)
 router = APIRouter()
 
 
