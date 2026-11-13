@@ -11,7 +11,7 @@ from app.core.config import settings
 from app.models import Challenge, ChallengeStatus, Game, TournamentMatch, Tournament, User, UserRole
 
 CHALLENGE_DURATION = timedelta(days=2)
-FINALE_CHALLENGE_DURATION = timedelta(minutes=15)
+FINALE_CHALLENGE_DURATION = timedelta(minutes=30)
 
 
 def challenge_duration(now: datetime) -> timedelta:

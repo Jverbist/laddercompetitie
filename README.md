@@ -281,7 +281,7 @@ Er zijn twee routes. `TEAMS_WEBHOOK_URL` is een flow met de trigger *When an HTT
 2. Plan `process-deadlines` elke minuut via een worker, bijvoorbeeld Celery + Redis of een platform scheduler. Voeg daarin ook de 24-uursreminder toe.
 3. Voeg Alembic-migraties toe vóór de eerste gedeelde of productieomgeving; `create_all` is geschikt voor de lokale start.
 4. Bouw een responsive frontend tegen deze API voor dashboard, ranking, uitdagingen en administratie.
-5. Finale (13 november): van 13:30 tot 16:30 gelden de normale ladderregels met 15 minuten per uitdaging, maar enkel voor de top 10 (`FINALE_LADDER_SIZE`); wie daarbuiten staat kan die dag niet uitdagen of uitgedaagd worden. Om 16:30 worden alle open uitdagingen automatisch geannuleerd zonder rangwissel (achtergrondtaak elke 30 s en bij elke paginalading). Vanaf 17:00 spelen de acht finalisten het grote finalespel (quiz en mini-spelen, individueel). Dat verloopt buiten de applicatie; `/finale` toont de live top 8 en het schema (`FINALE_BRACKET_START`, `FINALE_QUALIFICATION_START/END` in `.env`).
+5. Finale (13 november): van 13:30 tot 16:30 gelden de normale ladderregels met 30 minuten per nieuwe uitdaging, maar enkel voor de top 10 (`FINALE_LADDER_SIZE`); wie daarbuiten staat kan die dag niet uitdagen of uitgedaagd worden. Om 16:30 worden alle open uitdagingen automatisch geannuleerd zonder rangwissel (achtergrondtaak elke 30 s en bij elke paginalading). Vanaf 17:00 spelen de acht finalisten het grote finalespel (quiz en mini-spelen, individueel). Dat verloopt buiten de applicatie; `/finale` toont de live top 8 en het schema (`FINALE_BRACKET_START`, `FINALE_QUALIFICATION_START/END` in `.env`).
 
 ## Weekendpauze
 

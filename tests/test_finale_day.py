@@ -19,12 +19,24 @@ def setup_finale(db, players=9):
 def test_finale_challenge_duration_and_cutoff(db):
     users, _ = setup_finale(db)
     inside = settings.finale_qualification_start + timedelta(minutes=5)
-    assert challenge_duration(inside) == timedelta(minutes=15)
+    assert challenge_duration(inside) == timedelta(minutes=30)
     assert challenge_duration(inside - timedelta(days=30)) == timedelta(days=2)
     challenge = create_challenge(db, challenger_id=users[1].id, challenged_id=users[0].id, now=inside)
-    assert challenge.deadline_at == inside + timedelta(minutes=15)
+    assert challenge.deadline_at == inside + timedelta(minutes=30)
     with pytest.raises(HTTPException):
         create_challenge(db, challenger_id=users[3].id, challenged_id=users[2].id, now=settings.finale_qualification_end)
+
+
+def test_existing_challenge_keeps_its_deadline(db):
+    users, _ = setup_finale(db)
+    inside = settings.finale_qualification_start + timedelta(minutes=5)
+    previous = create_challenge(db, challenger_id=users[1].id, challenged_id=users[0].id, now=inside)
+    previous.deadline_at = inside + timedelta(minutes=15)
+    db.commit()
+    create_challenge(db, challenger_id=users[3].id, challenged_id=users[2].id, now=inside)
+    db.commit()
+    db.refresh(previous)
+    assert previous.deadline_at == (inside + timedelta(minutes=15)).replace(tzinfo=None)
 
 
 def test_finale_announcement_window():
